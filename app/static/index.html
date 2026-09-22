@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AI Agent — Reference Skeleton</title>
+<style>
+  body { font-family: sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; }
+  #chat { border: 1px solid #ccc; border-radius: 8px; padding: 16px; height: 500px; overflow-y: auto; margin-bottom: 12px; }
+  .msg { margin-bottom: 16px; }
+  .user { text-align: right; }
+  .user .bubble { background: #0078d4; color: white; }
+  .agent .bubble { background: #f1f1f1; color: #111; }
+  .bubble { display: inline-block; padding: 10px 14px; border-radius: 12px; max-width: 90%; white-space: pre-wrap; text-align: left; }
+  .bubble img { max-width: 100%; border-radius: 6px; margin-top: 8px; display: block; }
+  #inputRow { display: flex; gap: 8px; }
+  #messageInput { flex: 1; padding: 10px; font-size: 14px; }
+  #sendButton { padding: 10px 20px; }
+  #startButton { padding: 12px 24px; font-size: 15px; cursor: pointer; }
+</style>
+</head>
+<body>
+  <h2>AI Agent — Reference Skeleton</h2>
+  <p>A minimal chat demonstrating a multi-turn tool-calling agent with session
+     persistence. Try asking <em>"what's the current time?"</em> or
+     <em>"add 12 and 30"</em>.</p>
+
+  <div id="startRow">
+    <button id="startButton">Start a conversation</button>
+  </div>
+
+  <div id="chatWrap" style="display:none;">
+    <div id="chat"></div>
+    <div id="inputRow">
+      <input id="messageInput" type="text" placeholder="Type your message..." />
+      <button id="sendButton">Send</button>
+    </div>
+  </div>
+
+<script>
+const chat = document.getElementById("chat");
+const input = document.getElementById("messageInput");
+const button = document.getElementById("sendButton");
+const startButton = document.getElementById("startButton");
+const startRow = document.getElementById("startRow");
+const chatWrap = document.getElementById("chatWrap");
+
+// The id of the current conversation. Kept in localStorage so a browser refresh
+// keeps the same conversation.
+let sessionId = localStorage.getItem("sessionId");
+
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function renderContent(text) {
+  const escaped = escapeHtml(text);
+  return escaped
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">')
+    .replace(/(?<!!)\[([^\]]*)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+}
+
+function addMessage(role, text) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "msg " + (role === "user" ? "user" : "agent");
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  bubble.innerHTML = renderContent(text);
+  wrapper.appendChild(bubble);
+  chat.appendChild(wrapper);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+async function sendMessage() {
+  const text = input.value.trim();
+  if (!text) return;
+  addMessage("user", text);
+  input.value = "";
+
+  const response = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session_id: sessionId, message: text }),
+  });
+  const data = await response.json();
+  addMessage("agent", data.reply);
+}
+
+async function startConversation() {
+  const response = await fetch("/api/start", { method: "POST" });
+  const data = await response.json();
+  sessionId = data.session_id;
+  localStorage.setItem("sessionId", sessionId);
+  startRow.style.display = "none";
+  chatWrap.style.display = "block";
+  addMessage("agent", data.reply);
+}
+
+button.addEventListener("click", sendMessage);
+input.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
+startButton.addEventListener("click", startConversation);
+
+// Resume an existing conversation after a browser refresh.
+async function resumeSession() {
+  if (!sessionId) return;
+  const resp = await fetch("/api/session/" + sessionId);
+  if (!resp.ok) {
+    localStorage.removeItem("sessionId");
+    sessionId = null;
+    return;
+  }
+  const data = await resp.json();
+  startRow.style.display = "none";
+  chatWrap.style.display = "block";
+  for (const m of data.messages) {
+    addMessage(m.role === "user" ? "user" : "agent", m.content);
+  }
+}
+
+resumeSession();
+</script>
+</body>
+</html>
