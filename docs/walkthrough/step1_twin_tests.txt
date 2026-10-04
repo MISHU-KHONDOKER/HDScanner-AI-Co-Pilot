@@ -1,0 +1,25 @@
+PS <project>\MISHU_KHONDOKER> .\venv\Scripts\python -m pytest tests\test_virtual_scanner.py -v
+platform win32 -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0 -- <project>\MISHU_KHONDOKER\venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: <project>\MISHU_KHONDOKER
+configfile: pyproject.toml
+collected 18 items
+
+tests/test_virtual_scanner.py::test_one_preview_reply_per_loaded_slide PASSED  [  5%]
+tests/test_virtual_scanner.py::test_empty_position_gives_no_preview PASSED  [ 11%]
+tests/test_virtual_scanner.py::test_a_preview_clears_the_focus_points PASSED  [ 16%]
+tests/test_virtual_scanner.py::test_click_outside_the_box_is_ignored PASSED  [ 22%]
+tests/test_virtual_scanner.py::test_right_click_on_an_existing_point_deletes_it PASSED  [ 27%]
+tests/test_virtual_scanner.py::test_scan_without_a_box_keeps_the_points_with_a_box_wipes_them PASSED  [ 33%]
+tests/test_virtual_scanner.py::test_real_scanner_reports_zero_on_a_perfect_scan PASSED  [ 38%]
+tests/test_virtual_scanner.py::test_simulator_code_fault PASSED  [ 44%]
+tests/test_virtual_scanner.py::test_no_scan_started_fault_still_scans PASSED  [ 50%]
+tests/test_virtual_scanner.py::test_calibration_dialog_freezes_the_scan PASSED  [ 55%]
+tests/test_virtual_scanner.py::test_early_stop_result_file_comes_later PASSED  [ 61%]
+tests/test_virtual_scanner.py::test_normal_close_writes_the_live_values PASSED  [ 66%]
+tests/test_virtual_scanner.py::test_foreign_licence_key_stops_the_software_starting PASSED  [ 72%]
+tests/test_virtual_scanner.py::test_scrambled_settings_differ_from_the_good_file PASSED  [ 77%]
+tests/test_virtual_scanner.py::test_settings_reject_values_the_software_does_not_offer PASSED  [ 83%]
+tests/test_virtual_scanner.py::test_unknown_fault_is_refused PASSED  [ 88%]
+tests/test_virtual_scanner.py::test_harness_refuses_a_real_door_left_open PASSED  [ 94%]
+tests/test_virtual_scanner.py::test_harness_blocks_the_real_scanner_port PASSED

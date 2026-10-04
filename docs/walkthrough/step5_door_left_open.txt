@@ -1,0 +1,15 @@
+PS <project>\MISHU_KHONDOKER> ..\venv\Scripts\python tools\m3_try.py --fault scrambled_settings
+Traceback (most recent call last):
+  File "<project>\MISHU_KHONDOKER\tools\m3_try.py", line 79, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "<project>\MISHU_KHONDOKER\tools\m3_try.py", line 45, in main
+    copilot = load_copilot(a.private, twin)
+  File "<project>\MISHU_KHONDOKER\virtual_scanner\harness.py", line 158, in load_copilot
+    check_all_doors_swapped(main, config, twin)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "<project>\MISHU_KHONDOKER\virtual_scanner\harness.py", line 176, in check_all_doors_swapped
+    raise DoorNotSwapped("refusing to run - real machine doors left open:\n  "
+                         + "\n  ".join(problems))
+virtual_scanner.harness.DoorNotSwapped: refusing to run - real machine doors left open:
+  co-pilot.scanner is still the real scanner_client object

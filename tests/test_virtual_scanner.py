@@ -1,0 +1,156 @@
+"""M3 - the virtual scanner behaves like the real one (each test names its source).
+
+These run in CI. They test the twin on its own; the co-pilot runs against it in
+tools/m3_first_runs.py (needs the private project).
+"""
+import socket
+import time
+import types
+
+import pytest
+
+from virtual_scanner import VirtualScanner
+from virtual_scanner import harness
+from virtual_scanner.twin import MACHINE_KEY
+
+
+@pytest.fixture
+def twin(tmp_path):
+    t = VirtualScanner(tmp_path / "scanner", "brightfield", ("clear", "clear", None, None))
+    t.socket.connect()
+    return t
+
+
+def test_one_preview_reply_per_loaded_slide(twin):           # real 4-slide loader, 2026-09-26
+    twin.socket.new_scan(slide_no=0)
+    assert twin.socket.last_preview_slides == [0, 1]
+
+
+def test_empty_position_gives_no_preview(twin):
+    assert twin.socket.new_scan(slide_no=2) is None
+
+
+def test_a_preview_clears_the_focus_points(twin):            # real, 2026-09-24
+    twin.socket.new_scan()
+    x, y, w, h = twin.box_px()
+    twin.gui.place_focus_points_by_click([[x + w // 2, y + h // 2]], slide=0)
+    assert twin.points[0]
+    twin.socket.new_scan()
+    assert twin.points[0] == []
+
+
+def test_click_outside_the_box_is_ignored(twin):             # real, 2026-09-30
+    twin.socket.new_scan()
+    r = twin.gui.place_focus_points_by_click([[1, 1]], slide=0)
+    assert r["verified_count"] == 0 and twin.points[0] == []
+
+
+def test_right_click_on_an_existing_point_deletes_it(twin):  # real, 2026-09-29
+    twin.socket.new_scan()
+    x, y, w, h = twin.box_px()
+    p = [x + w // 2, y + h // 2]
+    twin.gui.place_focus_points_by_click([p], slide=0)
+    twin.gui.place_focus_points_by_click([p], slide=0)
+    assert twin.points[0] == []
+
+
+def test_scan_without_a_box_keeps_the_points_with_a_box_wipes_them(twin):   # real, 2026-09-29
+    twin.socket.new_scan()
+    x, y, w, h = twin.box_px()
+    twin.gui.place_focus_points_by_click([[x + w // 2, y + h // 2]], slide=0)
+    twin.socket.start_scan(0, "A")
+    assert twin.points[0]
+    twin.socket.start_scan(0, "B", x, y, w, h)
+    assert twin.points[0] == []
+
+
+def test_real_scanner_reports_zero_on_a_perfect_scan(twin):  # real, 2026-09-30
+    twin.socket.start_scan(0, "S1")
+    assert twin.socket.wait_for_scan_finished()["result"] == 0
+    assert list(twin.results.glob("*/S1/Scan.txt"))
+
+
+def test_simulator_code_fault(tmp_path):
+    t = VirtualScanner(tmp_path, faults=("simulator_result_code",))
+    t.socket.connect()
+    t.socket.start_scan(0, "S1")
+    assert t.socket.wait_for_scan_finished()["result"] == 1
+
+
+def test_no_scan_started_fault_still_scans(tmp_path):        # real build, 2026-09-29
+    t = VirtualScanner(tmp_path, faults=("no_scan_started",))
+    t.socket.connect()
+    assert t.socket.start_scan(0, "S1") is None
+    assert t.socket.wait_for_scan_finished() is not None
+
+
+def test_calibration_dialog_freezes_the_scan(tmp_path):      # real, 2026-09-18
+    t = VirtualScanner(tmp_path, faults=("calibration_modal",))
+    t.socket.connect()
+    assert t.socket.start_scan(0, "S1") is None
+    assert t.socket.wait_for_scan_finished() is None
+
+
+def test_early_stop_result_file_comes_later(tmp_path):       # real, 2026-09-26
+    t = VirtualScanner(tmp_path, faults=("early_scan_stopped",))
+    t.result_delay_s = 0.3
+    t.socket.connect()
+    t.socket.start_scan(0, "S1")
+    assert t.socket.wait_for_scan_finished() is not None
+    assert not list(t.results.glob("*/S1/Scan.txt"))
+    time.sleep(0.4)
+    t.flush_results()
+    assert list(t.results.glob("*/S1/Scan.txt"))
+
+
+def test_normal_close_writes_the_live_values(twin):          # real, 2026-09-26
+    twin.gui.set_focus_density("10")
+    twin.process.close_hdscanner_normally()
+    assert "FocusDensity=10" in twin.config_path.read_text(encoding="utf-8")
+
+
+def test_foreign_licence_key_stops_the_software_starting(twin):   # real, 2026-09-30
+    text = twin.config_path.read_text(encoding="utf-8")
+    twin.config_path.write_text(text.replace(MACHINE_KEY, "BBBB2222FAKE"), encoding="utf-8")
+    twin.process.stop_hdscanner()
+    assert twin.process.start_hdscanner() is False
+
+
+def test_scrambled_settings_differ_from_the_good_file(tmp_path):
+    t = VirtualScanner(tmp_path, faults=("scrambled_settings",))
+    assert t.live["FocusDensity"] == "0" and "FocusDensity=4" in t.good_bf.read_text(encoding="utf-8")
+
+
+def test_settings_reject_values_the_software_does_not_offer(twin):
+    r = twin.gui.set_stitch_mode("Sideways")
+    assert r["ok"] is False and "Seamless" in r["options"]
+
+
+def test_unknown_fault_is_refused(tmp_path):
+    with pytest.raises(ValueError):
+        VirtualScanner(tmp_path, faults=("made_up",))
+
+
+# ------------------------------------------------------------------ harness safety
+
+def test_harness_refuses_a_real_door_left_open(twin):
+    fake_main = types.ModuleType("fake_main")
+    real_looking = lambda: None                          # noqa: E731
+    real_looking.__module__ = "scanner_gui"
+    fake_main.get_anti_blur = real_looking
+    for name, attr in harness.PROCESS_IN_COPILOT.items():
+        setattr(fake_main, name, getattr(twin.process, attr))
+    fake_config = types.ModuleType("fake_config")
+    for name, attr in harness.PROCESS_IN_CONFIG.items():
+        setattr(fake_config, name, getattr(twin.process, attr))
+    with pytest.raises(harness.DoorNotSwapped):
+        harness.check_all_doors_swapped(fake_main, fake_config, twin)
+
+
+def test_harness_blocks_the_real_scanner_port():
+    harness.install_blocks()
+    try:
+        with pytest.raises(harness.RealMachineBlocked):
+            socket.create_connection(("127.0.0.1", harness.SCANNER_PORT), timeout=1)
+    finally:
+        harness.remove_blocks()

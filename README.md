@@ -86,6 +86,16 @@ proves. See [M2 — Test foundation](docs/M2_test_foundation.md).
 **Proof that the tests work:** [a test that catches a real production incident](docs/demo_mutation_test.md)
 — the safety guard is switched off on purpose and the test fails, without touching any machine.
 
+### Virtual instrument
+
+A [virtual scanner](docs/M3_virtual_instrument.md) that the **real, unchanged co-pilot**
+drives end to end, with real failures switched on at will (another machine's config,
+a scan frozen behind a dialog, a lying status message, scrambled settings). First
+result: [11 of 13 scenarios pass, 2 known open failure modes reproduced](docs/m3_first_runs.md)
+— including a false success claim that is now provable and fixable.
+Checked by hand in a [seven-step walkthrough](docs/M3_walkthrough.md) with the real
+terminal output of every run.
+
 ### Publishing safely
 
 Everything here passes [`tools/leak_check.py`](tools/leak_check.py), which runs

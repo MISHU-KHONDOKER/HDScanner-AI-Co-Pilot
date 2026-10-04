@@ -1,0 +1,19 @@
+PS <project>\MISHU_KHONDOKER> ..\venv\Scripts\python tools\m3_try.py --fault other_machine_good_file
+
+Virtual scanner: mode=brightfield, loader=['clear', None, None, None], faults=['other_machine_good_file']
+Customer: "start scan" on slide 1
+
+Steps the co-pilot took:
+  NO  config           {'restored': False, 'restarted': False, 'fixed': None}
+
+Outcome:
+  support code: CONFIG  level: 3
+  the customer is told: "I'm sorry — this needs a technician. Please contact support and give them this code: CONFIG."
+
+What the virtual scanner saw:
+  process.close_normally  0x
+  process.force_close     0x
+  process.start           0x
+  socket.NewScan         0x
+  socket.StartScan       0x
+  live settings now: {'AntiBlur': '10', 'FocusDensity': '4', 'StitchMode': '2', 'SlideType': 'TCT'}

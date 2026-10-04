@@ -1,0 +1,263 @@
+"""M3 first end-to-end runs: the REAL co-pilot on the virtual scanner, no LLM.
+
+Each scenario builds a fresh virtual scanner (optionally with faults), loads the
+private co-pilot through the harness (all machine doors swapped, real machines
+blocked), calls the co-pilot's own functions, and checks the outcome against
+what M1 says is correct.
+
+Run with the PRIVATE project's Python (it has the co-pilot's dependencies):
+
+    <private>/venv/Scripts/python tools/m3_first_runs.py [path/to/private/project]
+
+Writes a summary to docs/m3_first_runs.md (codes and counts only - no paths).
+"""
+import configparser
+import hashlib
+import socket
+import sys
+import tempfile
+import time
+import traceback
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO))
+sys.path.insert(0, str(REPO / "tools"))
+
+from virtual_scanner import VirtualScanner  # noqa: E402
+from virtual_scanner.harness import (DoorNotSwapped, RealMachineBlocked,  # noqa: E402
+                                     check_all_doors_swapped, load_copilot)
+import leak_check  # noqa: E402
+
+PRIVATE = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else REPO.parent
+RESULTS = []
+
+
+def sha(path):
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def scenario(sid, title, rule, expected):
+    def wrap(fn):
+        def run():
+            t0 = time.time()
+            try:
+                status, observed = fn()
+            except Exception as e:  # a crash is a result too
+                status, observed = "FAIL", f"crashed: {type(e).__name__}: {e}"
+                traceback.print_exc()
+            RESULTS.append((sid, title, rule, expected, observed, status, round(time.time() - t0, 1)))
+            print(f"{status:<5} {sid} {title}  ->  {observed}")
+        RESULTS.append  # keep linters quiet
+        SCENARIOS.append(run)
+        return run
+    return wrap
+
+
+SCENARIOS = []
+
+
+def fresh(mode="brightfield", loaded=("clear", None, None, None), faults=()):
+    twin = VirtualScanner(tempfile.mkdtemp(prefix="vscan-"), mode, loaded, faults)
+    return twin, load_copilot(PRIVATE, twin)
+
+
+def code(r):
+    return r.get("support_code") or ("STILL-SCANNING" if r.get("still_scanning") else
+                                     "OK" if r.get("ok") else "?")
+
+
+# ---------------------------------------------------------------- safety
+
+@scenario("S0", "Harness refuses an unswapped door and blocks the real scanner port",
+          "M3 safety", "DoorNotSwapped + RealMachineBlocked")
+def s0():
+    twin, main = fresh()
+    import scanner_gui
+    main.get_anti_blur = scanner_gui.get_anti_blur          # put ONE real door back
+    refused = blocked = False
+    try:
+        check_all_doors_swapped(main, sys.modules["customer_config"], twin)
+    except DoorNotSwapped:
+        refused = True
+    try:
+        socket.create_connection(("127.0.0.1", 58207), timeout=1)
+    except RealMachineBlocked:
+        blocked = True
+    ok = refused and blocked
+    return ("PASS" if ok else "FAIL"), f"refused={refused}, port blocked={blocked}"
+
+
+# ---------------------------------------------------------------- Customer mode
+
+@scenario("S1", "Clean scanner, brightfield slide 1", "G1, G4 / F03",
+          "OK, 1 scan, success judged from the result file (scanner code 0)")
+def s1():
+    twin, main = fresh()
+    r = main.auto_scan(1, "brightfield")
+    tiles = (r.get("result") or {}).get("tile_count")
+    ok = code(r) == "OK" and twin.count("socket", "StartScan") == 1 and tiles == 132
+    return ("PASS" if ok else "FAIL"), f"{code(r)}, scans={twin.count('socket', 'StartScan')}, tiles={tiles}"
+
+
+@scenario("S2", "Good config belongs to ANOTHER machine", "G5 / F01",
+          "CONFIG, nothing closed or written")
+def s2():
+    twin, main = fresh(faults=("other_machine_good_file",))
+    before = sha(twin.config_path)
+    r = main.auto_scan(1, "brightfield")
+    touched = sha(twin.config_path) != before
+    closed = twin.count("process", "close_normally") + twin.count("process", "force_close")
+    ok = code(r) == "CONFIG" and not touched and closed == 0 and twin.count("socket", "StartScan") == 0
+    return ("PASS" if ok else "FAIL"), f"{code(r)}, config changed={touched}, closes={closed}"
+
+
+@scenario("S3", "Good config is the OTHER imaging mode", "G6 / F02",
+          "CONFIG, nothing closed or written")
+def s3():
+    twin, main = fresh(faults=("wrong_mode_good_file",))
+    before = sha(twin.config_path)
+    r = main.auto_scan(1, "brightfield")
+    touched = sha(twin.config_path) != before
+    ok = code(r) == "CONFIG" and not touched and twin.count("socket", "StartScan") == 0
+    return ("PASS" if ok else "FAIL"), f"{code(r)}, config changed={touched}"
+
+
+@scenario("S4", "Settings scrambled (in-house scramble test)", "G2, G7",
+          "OK, the 4 scrambled settings repaired, live values = good file")
+def s4():
+    twin, main = fresh(faults=("scrambled_settings",))
+    r = main.auto_scan(1, "brightfield")
+    step = next((s for s in r.get("steps", []) if s.get("step") == "config"), {})
+    live_ok = twin.live == {"AntiBlur": "10", "FocusDensity": "4", "StitchMode": "2", "SlideType": "TCT"}
+    backups = len(list(twin.root.glob("config.ini.customer-backup-*")))
+    ok = code(r) == "OK" and step.get("fixed") == 4 and live_ok and backups == 1
+    return ("PASS" if ok else "FAIL"), f"{code(r)}, fixed={step.get('fixed')}, live repaired={live_ok}, backups={backups}"
+
+
+@scenario("S5", "Scanner reports the simulator's code 1 instead of 0", "G1 / F03",
+          "OK - the code is not a verdict, the result file is")
+def s5():
+    twin, main = fresh(faults=("simulator_result_code",))
+    r = main.auto_scan(1, "brightfield")
+    ok = code(r) == "OK"
+    return ("PASS" if ok else "FAIL"), code(r)
+
+
+@scenario("S6", "ScanStopped arrives at once, result file only later", "G4 / F05",
+          "NO-RESULT, exactly 1 scan, no restart after the scan started")
+def s6():
+    twin, main = fresh(faults=("early_scan_stopped",))
+    r = main.auto_scan(1, "brightfield")
+    scans = twin.count("socket", "StartScan")
+    i_scan = next(i for i, (d, a, _) in enumerate(twin.log) if d == "socket" and a == "StartScan")
+    restarts_after = sum(1 for d, a, _ in twin.log[i_scan:] if d == "process")
+    ok = code(r) == "NO-RESULT" and scans == 1 and restarts_after == 0
+    return ("PASS" if ok else "FAIL"), f"{code(r)}, scans={scans}, restarts after scan={restarts_after}"
+
+
+@scenario("S7", "Calibration dialog freezes the scan", "G4 / F13",
+          "STILL-SCANNING, 1 scan, never retried or restarted")
+def s7():
+    twin, main = fresh(faults=("calibration_modal",))
+    r = main.auto_scan(1, "brightfield")
+    scans = twin.count("socket", "StartScan")
+    i_scan = next(i for i, (d, a, _) in enumerate(twin.log) if d == "socket" and a == "StartScan")
+    restarts_after = sum(1 for d, a, _ in twin.log[i_scan:] if d == "process")
+    ok = code(r) == "STILL-SCANNING" and scans == 1 and restarts_after == 0
+    return ("PASS" if ok else "FAIL"), f"{code(r)}, scans={scans}, restarts after scan={restarts_after}"
+
+
+@scenario("S8", "Very faint sample", "G3 / F20",
+          "NO-SAMPLE (level 2) - never a guessed box")
+def s8():
+    twin, main = fresh(loaded=("faint", None, None, None))
+    r = main.auto_scan(1, "brightfield")
+    ok = code(r) == "NO-SAMPLE" and r.get("level") == 2 and twin.count("socket", "StartScan") == 0
+    return ("PASS" if ok else "FAIL"), f"{code(r)}, level={r.get('level')}"
+
+
+@scenario("S9", "No slide in the requested position", "G10",
+          "NO-SLIDE (level 2)")
+def s9():
+    twin, main = fresh(loaded=("clear", None, None, None))
+    r = main.auto_scan(3, "brightfield")
+    ok = code(r) == "NO-SLIDE" and r.get("level") == 2
+    return ("PASS" if ok else "FAIL"), f"{code(r)}, level={r.get('level')}"
+
+
+@scenario("S10", "Scanner software not running at the start", "recovery level 1",
+          "OK - started once by the co-pilot, then scanned")
+def s10():
+    twin, main = fresh(faults=("scanner_not_running",))
+    r = main.auto_scan(1, "brightfield")
+    starts = twin.count("process", "start")
+    ok = code(r) == "OK" and starts == 1
+    return ("PASS" if ok else "FAIL"), f"{code(r)}, starts={starts}"
+
+
+@scenario("S11", "Focus clicks fail AND the good config has the automatic grid off",
+          "F25 (open)", "a scan with no focus at all must NOT be reported as a plain success")
+def s11():
+    twin, main = fresh(faults=("focus_clicks_ignored",))
+    twin.set_everywhere("Setup", "FocusDensity", "0", live_key="FocusDensity")
+    r = main.auto_scan(1, "brightfield")
+    failed = (r.get("result") or {}).get("focus_failed")
+    if code(r) == "OK" and failed:
+        return "OPEN", f"reported OK although the result file says {failed} tiles failed focus"
+    return ("PASS" if code(r) != "OK" else "FAIL"), f"{code(r)}, focus_failed={failed}"
+
+
+# ---------------------------------------------------------------- Training tools
+
+@scenario("S12", "Preview file missing when focus points are proposed", "G3 / F11 (open)",
+          "refuse - never take a fresh preview silently (it resets the box and points)")
+def s12():
+    twin, main = fresh()
+    main.ensure_scanner_connected()
+    found = main.run_scanner_tool("find_sample_area", {"slide_no": 0, "mode": "brightfield"})
+    left, top, width, height = found["proposed_box_mm"]
+    main.run_scanner_tool("set_scan_area", {"left_mm": left, "top_mm": top, "width_mm": width,
+                                            "height_mm": height, "slide_no": 0})
+    previews_before = twin.count("socket", "NewScan")
+    twin.lose_preview_files()
+    main.find_focus_points(3, "brightfield", 0)
+    extra = twin.count("socket", "NewScan") - previews_before
+    if extra:
+        return "OPEN", f"took {extra} fresh preview(s) on its own"
+    return "PASS", "refused without a new preview"
+
+
+def write_report():
+    lines = [
+        "# M3 — first end-to-end runs (generated)",
+        "",
+        "The **real co-pilot** (unchanged) on the **virtual scanner**, no LLM: each scenario",
+        "calls the co-pilot's own functions with all machine doors swapped. Generated by",
+        "[`tools/m3_first_runs.py`](../tools/m3_first_runs.py).",
+        "",
+        "**PASS** = behaved as M1 requires · **OPEN** = a known open failure mode, reproduced",
+        "· **FAIL** = unexpected.",
+        "",
+        "| # | Scenario | M1 | Expected | Observed | Result | s |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    for sid, title, rule, expected, observed, status, secs in RESULTS:
+        mark = {"PASS": "✅ PASS", "OPEN": "🟡 OPEN", "FAIL": "❌ FAIL"}[status]
+        lines.append(f"| {sid} | {title} | {rule} | {expected} | {observed} | {mark} | {secs} |")
+    counts = {s: sum(1 for r in RESULTS if r[5] == s) for s in ("PASS", "OPEN", "FAIL")}
+    lines += ["", f"**{counts['PASS']} pass · {counts['OPEN']} open (reproduced) · {counts['FAIL']} fail**", ""]
+    text = "\n".join(lines)
+    problems = leak_check.check_file("docs/m3_first_runs.md", text.encode(), leak_check.private_terms())
+    if problems:
+        print("report NOT written - leak check:", *problems, sep="\n  ")
+        return
+    (REPO / "docs" / "m3_first_runs.md").write_text(text, encoding="utf-8")
+    print("\nreport: docs/m3_first_runs.md")
+
+
+if __name__ == "__main__":
+    for run in SCENARIOS:
+        run()
+    write_report()
+    sys.exit(1 if any(r[5] == "FAIL" for r in RESULTS) else 0)

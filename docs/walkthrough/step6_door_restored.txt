@@ -1,0 +1,29 @@
+PS <project>\MISHU_KHONDOKER> git checkout -- virtual_scanner\harness.py
+PS <project>\MISHU_KHONDOKER> ..\venv\Scripts\python tools\m3_try.py --fault scrambled_settings
+
+Virtual scanner: mode=brightfield, loader=['clear', None, None, None], faults=['scrambled_settings']
+Customer: "start scan" on slide 1
+
+Steps the co-pilot took:
+  ok  config           {'restored': True, 'restarted': True, 'fixed': 4}
+        repaired: [Setup] AntiBlur: 50 -> 10
+        repaired: [Setup] FocusDensity: 0 -> 4
+        repaired: [Setup] StitchMode: 0 -> 2
+        repaired: [Slide] Type: Generic -> TCT
+  ok  find_sample      {'attempt': 1, 'samples_found': 1}
+  ok  set_box          {'attempt': 1}
+  ok  focus_points     {'attempt': 1, 'verified': 3}
+  ok  scan             {'attempt': 1, 'finished': True, 'result_code': 0}
+  ok  read_result      {'attempt': 1}
+
+Outcome:
+  SUCCESS - sample CUSTOMER-20261004-185305-S1, tiles=132, focus_failed=0
+
+What the virtual scanner saw:
+  process.close_normally  1x
+  process.force_close     1x
+  process.start           1x
+  socket.NewScan         3x
+  socket.StartScan       1x
+  live settings now: {'AntiBlur': '10', 'FocusDensity': '4', 'StitchMode': '2', 'SlideType': 'TCT'}
+PS <project>\MISHU_KHONDOKER>
