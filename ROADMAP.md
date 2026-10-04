@@ -22,7 +22,7 @@ The work is split into milestones. Each one has a single deliverable and a
 
 | # | Milestone | Deliverable | Done when | Skill | Status |
 |---|---|---|---|---|---|
-| M1 | **Define "correct"** | Requirements, acceptance criteria and a failure-mode catalogue built from real incidents | Every machine action has a written pass/fail rule | Requirement & outcome definition | ⬜ |
+| M1 | **Define "correct"** | [Requirements, acceptance criteria and a failure-mode catalogue](docs/M1_definition_of_correct.md) built from 27 real incidents | Every machine action has a written pass/fail rule | Requirement & outcome definition | ✅ |
 | M2 | **Test foundation** | Unit tests for every part that does not use the LLM; CI running the tests and the leak check on every push | Tests pass in CI, badge on the README | Production software engineering | ⬜ |
 | M3 | **Virtual instrument** | A simulated machine with settings, modes, a licence key and switchable faults, for cases that are unsafe to trigger on real hardware | Every catalogued fault can be reproduced on demand | Simulation, digital twin | ⬜ |
 | M4 | **Evaluation suite** | Scenarios run automatically and repeatedly, on the virtual instrument and on the real scanner | One command reports success rate, time, cost, unsafe actions and false "done" claims | AI evaluation & benchmarking | ⬜ |
