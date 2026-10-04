@@ -36,6 +36,7 @@ BLOCKED_FILE_PATTERNS = [
     r"\.(pem|key|pfx|p12)$",             # key material
     r"(^|/)\.leakcheck-private\.txt$",   # the private term list itself
     r"(^|/)journal/",                    # private learning log
+    r"(^|/)\.sync-private\.txt$",       # private sync rewrite rules
 ]
 
 # Content that must never be published.

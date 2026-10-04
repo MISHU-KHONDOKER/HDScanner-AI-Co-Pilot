@@ -1,0 +1,8 @@
+$ python -m pytest tests/test_config_guards.py -v -k F01_config_from_another
+--- test session starts ---
+platform <os> -- Python <version>
+rootdir: <repo>
+configfile: pyproject.toml
+collecting ... collected 16 items / 15 deselected / 1 selected
+tests/test_config_guards.py::test_F01_config_from_another_machine_is_refused_before_anything_is_written PASSED [100%]
+--- 1 passed, 15 deselected in 0.04s ---

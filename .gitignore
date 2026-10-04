@@ -10,3 +10,6 @@ copilot.db
 
 # Private learning log - never published
 journal/
+
+# Private sync rewrite rules - never published
+.sync-private.txt

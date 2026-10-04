@@ -1,5 +1,7 @@
 # HDScanner AI Co-Pilot — Agent Engineering Reference
 
+[![tests](https://github.com/MISHU-KHONDOKER/HDScanner-AI-Co-Pilot/actions/workflows/tests.yml/badge.svg)](https://github.com/MISHU-KHONDOKER/HDScanner-AI-Co-Pilot/actions/workflows/tests.yml)
+
 A production-distilled reference for building an **LLM agent with tool-calling**.
 This repository contains the reusable, provider-agnostic core of a support agent
 that was built to guide users through hardware troubleshooting — with the
@@ -73,6 +75,16 @@ customer-mode scan has been completed end to end on real hardware.
   - The agent reported a perfect scan as failed, because the real machine's
     status code meant the opposite of the simulator's. Success is now decided by
     the actual result files, never by a status number.
+
+### Tested core
+
+The co-pilot's safety-critical logic (configuration guards, result reading,
+geometry, focus-point choice, sample finding) is in [`copilot_core/`](copilot_core/)
+with 55 unit tests in [`tests/`](tests/), each named after the requirement it
+proves. See [M2 — Test foundation](docs/M2_test_foundation.md).
+
+**Proof that the tests work:** [a test that catches a real production incident](docs/demo_mutation_test.md)
+— the safety guard is switched off on purpose and the test fails, without touching any machine.
 
 ### Publishing safely
 

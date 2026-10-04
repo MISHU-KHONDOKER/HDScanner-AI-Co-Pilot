@@ -1,0 +1,4 @@
+# What the tests need (the agent skeleton's own needs are in requirements.txt)
+pytest==9.1.1
+pillow==12.3.0
+python-dotenv==1.2.3

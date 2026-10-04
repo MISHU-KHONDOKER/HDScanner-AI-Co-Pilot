@@ -1,0 +1,22 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Leak check (no secrets in the repository)
+        run: python tools/leak_check.py --tree HEAD
+      - name: Unit tests
+        run: python -m pytest
+      - name: Mutation test (the F01 test must catch a switched-off guard)
+        run: python tools/demo_mutation_test.py
