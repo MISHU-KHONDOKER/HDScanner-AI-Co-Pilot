@@ -17,9 +17,28 @@ removed so the engineering patterns stand on their own.
 
 ## About me and the full project
 
-I'm **Mishu Khondoker**, working toward **Industrial AI Application Engineer**
-roles: AI systems for industrial machines, built so they can be checked,
-measured and trusted.
+I'm **Mohyminul Islam** (Mishu), an AI/ML engineer working toward
+**Industrial AI Application Engineer** roles: AI systems for industrial machines,
+built so they can be checked, measured and trusted.
+
+- **M.S. in Software Engineering**, Northwestern Polytechnical University,
+  Xi'an, China. Thesis on protocol-aware GANs for network intrusion detection.
+- **First-author publications:** an IEEE conference paper (ICCBDAI 2025,
+  *Best Oral Presentation Award*) and a journal paper in *Expert Systems*
+  (Wiley, SCI), with a second journal paper submitted to Springer Nature.
+  State-of-the-art F1 on CICIDS2017, UNSW-NB15 and NSL-KDD, statistically
+  significant against all baselines (p < 0.01).
+- **4+ years as a network engineer** at an international telecom gateway:
+  alarms, signalling, fault response with vendors and carriers. That is where I
+  learned how real machines fail, and how support actually works.
+- **B.Sc. in Electronics and Communication Engineering**, East West University,
+  Dhaka.
+- Other projects: a multi-LLM gateway on Kubernetes with Prometheus/Grafana
+  observability, and a fully offline RAG chatbot (TinyLlama + local embeddings,
+  no data leaves the machine).
+- Languages: English (fluent), Bengali (native), Mandarin (basic).
+
+**Contact:** sailormishu50@gmail.com
 
 This repository is the public part of a project I build and run on real
 hardware: an **AI co-pilot for an industrial slide scanner** (digital
