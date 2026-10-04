@@ -7,3 +7,6 @@ copilot.db
 
 # Private leak-check terms - never published
 .leakcheck-private.txt
+
+# Private learning log - never published
+journal/

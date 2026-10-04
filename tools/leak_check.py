@@ -35,6 +35,7 @@ BLOCKED_FILE_PATTERNS = [
     r"\.(db|sqlite3?)$",                 # conversation databases
     r"\.(pem|key|pfx|p12)$",             # key material
     r"(^|/)\.leakcheck-private\.txt$",   # the private term list itself
+    r"(^|/)journal/",                    # private learning log
 ]
 
 # Content that must never be published.

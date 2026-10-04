@@ -84,6 +84,9 @@ would itself be a leak.
 
 ### Coming next (public write-ups)
 
+The full plan, with the status of each milestone, is in
+**[ROADMAP.md](ROADMAP.md)**. Highlights:
+
 - An automated **scramble-and-recover evaluation**: settings are deliberately
   scrambled, and I measure how reliably and how quickly the agent restores them.
 - A **small vs large model benchmark** for recognising the slide type.
