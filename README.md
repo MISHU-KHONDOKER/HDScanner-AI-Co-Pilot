@@ -15,6 +15,64 @@ removed so the engineering patterns stand on their own.
 
 ---
 
+## About me and the full project
+
+I'm **Mishu Khondoker**, working toward **Industrial AI Application Engineer**
+roles: AI systems for industrial machines, built so they can be checked,
+measured and trusted.
+
+This repository is the public part of a project I build and run on real
+hardware: an **AI co-pilot for an industrial slide scanner** (digital
+pathology). It started as a troubleshooting chat assistant and now **operates
+the machine itself**:
+
+| What the co-pilot does | How |
+|---|---|
+| Guides operators from power-on to a finished scan, one step at a time, in two languages | LLM + a structured knowledge base of fault cards, built from real support cases and field notes |
+| Drives the scanner: starts scans, follows progress, reads back the results | Tool calling over the scanner's own remote-control interface |
+| Changes settings that have no remote command | GUI automation of the scanner software, with every change read back |
+| Finds the sample on the slide and places its own focus points on the cells | Classic computer vision on the preview image (no extra model needed) |
+| "Customer mode": one command checks the configuration against a known-good file, repairs it, scans and reports | An agent pipeline with safety gates at every step |
+
+Running on **two production scanners** (one brightfield, one fluorescence). A
+customer-mode scan has been completed end to end on real hardware.
+
+### What I focus on as an engineer
+
+- **Defining "correct" before building:** acceptance criteria, edge cases and
+  failure modes for each machine action.
+- **Evaluation, not impressions:** repeatable tests that measure success rate,
+  time and failure types, and comparisons of large and small models on accuracy,
+  latency and cost.
+- **Safety and traceability:** an agent that controls a machine must refuse
+  rather than guess, and every change it makes must be logged and verified.
+- **Learning from real incidents.** Two examples from this project:
+  - The agent once applied another machine's known-good configuration, including
+    a machine-bound licence key, and the scanner locked itself. I added a guard
+    that refuses a configuration from a different machine or a different imaging
+    mode before anything is written, and a key that is never copied.
+  - The agent reported a perfect scan as failed, because the real machine's
+    status code meant the opposite of the simulator's. Success is now decided by
+    the actual result files, never by a status number.
+
+### Publishing safely
+
+Everything here passes [`tools/leak_check.py`](tools/leak_check.py), which runs
+on every commit and push. It blocks API keys, licence-style keys, real IP
+addresses, configuration files, internal documents and a private list of
+company-specific terms. That list is kept off GitHub, because publishing it
+would itself be a leak.
+
+### Coming next (public write-ups)
+
+- An automated **scramble-and-recover evaluation**: settings are deliberately
+  scrambled, and I measure how reliably and how quickly the agent restores them.
+- A **small vs large model benchmark** for recognising the slide type.
+- A **risk register and EU AI Act assessment** for an AI agent that controls
+  laboratory equipment.
+
+---
+
 ## What it demonstrates
 
 | Capability | Why it matters |
