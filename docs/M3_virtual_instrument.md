@@ -109,13 +109,43 @@ Full table: **[m3_first_runs.md](m3_first_runs.md)**.
 
 | | Result |
 |---|---|
-| ✅ Pass (11) | clean scan; another machine's config refused before any write; wrong-mode config refused; **scrambled settings repaired** (4 settings, backup made, live values = good file); success judged from the result file, not the status code; no restart and no second scan after an ambiguous stop; frozen scan reported as still scanning, never retried; faint sample → "not found"; empty position → "no slide"; scanner not running → started once, then scanned; harness safety |
-| 🟡 Open (2) | **S11 / F25** — focus placement fails and the good config has the automatic focus grid off: the customer is told the scan succeeded while the result file shows **every tile failed focus**. A false success claim, against the M1 release gate. **S12 / F11** — with the preview file missing, the focus tool silently takes a new preview, which resets the scan box and points. |
+| ✅ Pass (12) | clean scan; another machine's config refused before any write; wrong-mode config refused; **scrambled settings repaired** (4 settings, backup made, live values = good file); success judged from the result file, not the status code; no restart and no second scan after an ambiguous stop; frozen scan reported as still scanning, never retried; faint sample → "not found"; empty position → "no slide"; scanner not running → started once, then scanned; harness safety; **no blind scan when focus fails and the automatic grid is off (S11, fixed 2026-10-05)** |
+| 🟡 Open (1) | **S12 / F11** — with the preview file missing, the focus tool silently takes a new preview, which resets the scan box and points. |
 | ❌ Fail (0) | — |
 
-The two open results are not surprises — both were in the M1 catalogue as open
-risks. The twin turned them from suspicions into **reproducible evidence**, which
-is the point: they can now be fixed and the fix proven by the same scenario.
+The two open results of the first run were not surprises — both were in the M1
+catalogue as open risks. The twin turned them from suspicions into **reproducible
+evidence**, which is the point: they can now be fixed and the fix proven by the
+same scenario.
+
+### S11 fixed (2026-10-05) — and what the real result files taught first
+
+**First run:** OPEN — the customer was told "success" although the twin's result
+file said all 132 tiles failed focus.
+
+**The obvious fix was wrong.** The plan was "read `[Focus] Failed` from the result
+file and refuse when it is above 0". Before building it, three real result files
+from a production scanner were checked:
+- every one had three measured focus points and a fitted focus plane (`Z=…`);
+- one of them, with **sharp** images, said `Failed=1`; the others `Failed=0`.
+
+So `Failed > 0` would have reported a **good** scan as failed — swapping one false
+message for the opposite one. The twin's `Failed = <all tiles>` for an unfocused
+scan is an **assumption**, not an observation: no real unfocused result file has
+been seen yet.
+
+**The fix that does not depend on that guess:** stop the blind scan *before* it
+starts. When the focus points cannot be placed, the co-pilot used to fall back to
+"the scanner's own focus" — which does not exist when `FocusDensity = 0`. Now it
+checks that setting first and, when it is 0, stops with `FOCUS-POINTS` and starts
+no scan. S11 was tightened to require exactly that (`FOCUS-POINTS, scans=0`).
+
+**Proof:** S11 OPEN → PASS; S0–S10 unchanged; **mutation check** — with the new
+guard commented out, S11 goes straight back to OPEN with the old false success.
+
+**Still to do:** one controlled real scan without focus, to see what the scanner
+really writes — then correct the twin's result file, and decide whether a check
+*after* the scan is needed as well.
 
 **Checked by hand:** [M3 walkthrough](M3_walkthrough.md) — seven steps with the
 real terminal output of each run, including breaking the harness on purpose.

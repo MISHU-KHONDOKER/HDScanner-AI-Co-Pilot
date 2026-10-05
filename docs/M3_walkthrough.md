@@ -84,6 +84,10 @@ while the result file shows all 132 tiles failed focus. Before, that was a
 suspicion in M1; now it is repeatable evidence, and a fix can be proven by the
 same scenario.
 
+> **Update 2026-10-05:** S11 is fixed — no blind scan any more (`FOCUS-POINTS,
+> scans=0`), proven with a mutation check. How, and why the obvious fix would
+> have been wrong: [M3 — S11 fixed](M3_virtual_instrument.md#s11-fixed-2026-10-05--and-what-the-real-result-files-taught-first).
+
 **Learned.** In M2 the licence-key guard was proven as a single function. Here
 it is proven **inside the whole customer pipeline**, with the real co-pilot
 making the decisions — the step up from M2 to M3.

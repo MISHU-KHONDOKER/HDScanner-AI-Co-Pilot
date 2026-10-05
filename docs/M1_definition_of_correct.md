@@ -182,7 +182,7 @@ Format: **Pass when** = the conditions that must all hold. Linked global rules a
 | F22 | A "draw only" command **actually scanned** and saved the region permanently; later the config was reset to a skeleton after a crash | Undocumented side effects | S4 | Snapshot config + images before probes; probes read-only by default | G7 | 🟡 process rule, no code guard |
 | F23 | Restoring an **old** good file would have undone a fresh calibration | Good file older than calibration | S3 | Good file refreshed from the live, verified state | G5, G7 | 🟡 policy for calibration values open |
 | F24 | Correct box **failed verification** on the real machine | Real slide size and non-square pixels differed from simulator | S2 | Scale from the machine's own slide size, per axis | G2 | ✅ |
-| F25 | Good config had automatic focus grid **off** → fallback "scanner's own focus" has no points on faint slides | Config choice interacts with fallback | S3 | — | G3 | ⛔ |
+| F25 | Good config had automatic focus grid **off** → fallback "scanner's own focus" has no points on faint slides | Config choice interacts with fallback | S3 | Focus points failed **and** FocusDensity 0 → no fallback exists → stop with `FOCUS-POINTS`, start no scan (2026-10-05, proven by M3 S11 + mutation check) | G3 | ✅ |
 | F26 | Customer session silently **turned into Training** after a save | Database row replaced without the audience field | S3 | Audience passed on every save | G9 | ✅ |
 | F27 | First attempt to set the scan box sometimes finds no input fields | Tab switch timing | S1 | Retry succeeds | G2 | 🟡 masked by retry |
 

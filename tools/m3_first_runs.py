@@ -197,15 +197,17 @@ def s10():
 
 
 @scenario("S11", "Focus clicks fail AND the good config has the automatic grid off",
-          "F25 (open)", "a scan with no focus at all must NOT be reported as a plain success")
+          "F25", "no blind scan: refuse with FOCUS-POINTS, start no scan, never report success")
 def s11():
     twin, main = fresh(faults=("focus_clicks_ignored",))
     twin.set_everywhere("Setup", "FocusDensity", "0", live_key="FocusDensity")
     r = main.auto_scan(1, "brightfield")
+    scans = twin.count("socket", "StartScan")
     failed = (r.get("result") or {}).get("focus_failed")
     if code(r) == "OK" and failed:
         return "OPEN", f"reported OK although the result file says {failed} tiles failed focus"
-    return ("PASS" if code(r) != "OK" else "FAIL"), f"{code(r)}, focus_failed={failed}"
+    ok = code(r) == "FOCUS-POINTS" and scans == 0
+    return ("PASS" if ok else "FAIL"), f"{code(r)}, scans={scans}"
 
 
 # ---------------------------------------------------------------- Training tools
