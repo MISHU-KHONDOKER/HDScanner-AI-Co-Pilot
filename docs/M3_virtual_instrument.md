@@ -115,15 +115,15 @@ Also reproducible through the twin's normal behaviour: F07, F08, F09, F10, F12.
 
 ## 5. First end-to-end runs (no LLM)
 
-[`tools/m3_first_runs.py`](../tools/m3_first_runs.py) runs 13 scenarios: the real
+[`tools/m3_first_runs.py`](../tools/m3_first_runs.py) runs 14 scenarios (13 at first, S13 added 2026-10-05): the real
 co-pilot's own functions on a fresh virtual scanner each time. No language model
 is involved yet (that is M4), so the runs are free, fast and repeatable.
 Full table: **[m3_first_runs.md](m3_first_runs.md)**.
 
 | | Result |
 |---|---|
-| ✅ Pass (13) | clean scan; another machine's config refused before any write; wrong-mode config refused; **scrambled settings repaired** (4 settings, backup made, live values = good file); success judged from the result file, not the status code; no restart and no second scan after an ambiguous stop; frozen scan reported as still scanning, never retried; faint sample → "not found"; empty position → "no slide"; scanner not running → started once, then scanned; harness safety; **no blind scan when focus fails and the automatic grid is off (S11, fixed 2026-10-05)**; **focus tool refuses when the preview is missing, takes no preview itself (S12, fixed 2026-10-05)** |
-| 🟡 Open (0) | — (first run: S11 / F25 and S12 / F11 — both fixed, see below) |
+| ✅ Pass (14) | clean scan; another machine's config refused before any write; wrong-mode config refused; **scrambled settings repaired** (4 settings, backup made, live values = good file); success judged from the result file, not the status code; no restart and no second scan after an ambiguous stop; frozen scan reported as still scanning, never retried; faint sample → "not found"; empty position → "no slide"; scanner not running → started once, then scanned; harness safety; **no blind scan when focus fails and the automatic grid is off (S11, fixed 2026-10-05)**; **focus tool refuses when the preview is missing, takes no preview itself (S12, fixed 2026-10-05)**; **placement never clicks on an existing focus point (S13 / F12, added and fixed 2026-10-05)** |
+| 🟡 Open (0) | — (first run: S11 / F25 and S12 / F11; later S13 / F12 — all fixed, see below) |
 | ❌ Fail (0) | — |
 
 The two open results of the first run were not surprises — both were in the M1
@@ -175,6 +175,24 @@ answer, not only "no new preview".
 **Proof:** S12 OPEN → PASS; **all 13 scenarios pass**; mutation check — with the
 old fallback put back in a temporary copy, S12 goes back to OPEN. Step by step
 with the real terminal output: **[S12 fix demo](demo_s12_fix.md)**.
+
+### S13 added and fixed (2026-10-05) — placing a point could delete one
+
+**New scenario:** on the real scanner a right-click on an existing focus point
+deletes it (F12). S13 puts a customer's point exactly where the co-pilot will
+click. First run: OPEN — the customer's point was deleted. The same could happen
+to the scanner's automatic grid, or to the co-pilot's own points on its retry.
+
+**Fix:** the screen reader now also reports *where* the existing points are; the
+co-pilot skips any proposed point on or next to one and reports it; screen
+unreadable → nothing clicked.
+
+**Proof:** S13 OPEN → PASS; **all 14 scenarios pass**; mutation check (existing
+points ignored, in a temporary copy) → S13 back to OPEN. The real screen reading
+(which the twin replaces) was checked on saved production screenshots: it finds
+the 20-point automatic grid and the 3 placed points. Still to confirm live: a
+single "point" at the exact box centre on unselected slides. Step by step:
+**[S13 fix demo](demo_s13_fix.md)**.
 
 **Checked by hand:** [M3 walkthrough](M3_walkthrough.md) — seven steps with the
 real terminal output of each run, including breaking the harness on purpose.

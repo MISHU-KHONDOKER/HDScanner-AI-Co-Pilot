@@ -233,6 +233,29 @@ def s12():
                                         f"preview_missing={r.get('preview_missing')}")
 
 
+@scenario("S13", "A customer's focus point sits where the co-pilot wants to click", "G8 / F12",
+          "never right-click on or next to an existing point (it deletes it): skip that one, place the rest, report it")
+def s13():
+    twin, main = fresh()
+    main.ensure_scanner_connected()
+    found = main.run_scanner_tool("find_sample_area", {"slide_no": 0, "mode": "brightfield"})
+    left, top, width, height = found["proposed_box_mm"]
+    main.run_scanner_tool("set_scan_area", {"left_mm": left, "top_mm": top, "width_mm": width,
+                                            "height_mm": height, "slide_no": 0})
+    proposal = main.find_focus_points(3, "brightfield", 0)
+    customer = tuple(proposal["points"][0]["px"])           # the customer already put a point there
+    twin.points[0].append(customer)
+    r = main.place_focus_points(0)
+    deleted = twin.count("machine", "focus_point_deleted")
+    if deleted:
+        return "OPEN", f"right-clicked on an existing point - {deleted} point(s) deleted"
+    kept = customer in twin.points[0]
+    skipped = len(r.get("skipped") or [])
+    ok = kept and skipped == 1 and r.get("verified_count") == 2
+    return ("PASS" if ok else "FAIL"), (f"customer's point kept, skipped={skipped}, "
+                                        f"placed={r.get('verified_count')}")
+
+
 def write_report():
     lines = [
         "# M3 — first end-to-end runs (generated)",

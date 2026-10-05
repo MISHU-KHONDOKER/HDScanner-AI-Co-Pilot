@@ -96,14 +96,17 @@ a false success claim.
 Checked by hand in a [seven-step walkthrough](docs/M3_walkthrough.md) with the real
 terminal output of every run.
 
-**Both weaknesses fixed and proven on the twin** — each with the fix switched
+**Three weaknesses fixed and proven on the twin** — each with the fix switched
 off on purpose to prove the scenario catches it:
 - [the false success claim](docs/demo_s11_fix.md) — real result files checked
   first; they showed the obvious fix would have been wrong;
 - [a "look only" tool that quietly changed the machine](docs/demo_s12_fix.md) —
-  a real field incident, now an honest refusal.
+  a real field incident, now an honest refusal;
+- [placing a focus point could delete one](docs/demo_s13_fix.md) — a new
+  scenario for a real machine behaviour, including the co-pilot deleting its own
+  points on a retry.
 
-Now [13 of 13 scenarios pass](docs/m3_first_runs.md).
+Now [14 of 14 scenarios pass](docs/m3_first_runs.md).
 
 ### Publishing safely
 

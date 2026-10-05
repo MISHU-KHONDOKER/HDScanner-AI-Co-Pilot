@@ -495,7 +495,8 @@ class VirtualGUI:
         if not self.twin.preview_taken:
             return {"ok": False, "error": "No previews on the Scan tab."}
         box = self.twin.box_px()
-        slides = [{"slide": n + 1, "box_px": list(box), "focus_points": len(self.twin.points[n])}
+        slides = [{"slide": n + 1, "box_px": list(box), "focus_marks": len(self.twin.points[n]),
+                   "focus_marks_px": [list(p) for p in self.twin.points[n]]}
                   for n, kind in enumerate(self.twin.loaded) if kind is not None]
         return {"ok": True, "slides": slides, "preview_size": list(preview_size)}
 

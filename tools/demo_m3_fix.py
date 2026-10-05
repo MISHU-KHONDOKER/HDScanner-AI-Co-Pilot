@@ -72,6 +72,18 @@ FIXES = {
                   "#   preview missing  ->  refuse (ok false, preview_missing)",
                   "#   ->  preview missing  ->  scanner.new_scan(slide)   # MUTATION: the old silent preview"],
     },
+    "s13": {
+        "scenario": "S13",
+        "name": "never click on an existing focus point",
+        "guard": ('    existing = next((s.get("focus_marks_px") or [] for s in seen["slides"]\n'
+                  '                     if s["slide"] == slide + 1), [])\n'),
+        "times": 1,
+        "mutant": '    existing = []  # MUTATION: existing focus points ignored - click anyway\n',
+        "pass_text": "customer's point kept, skipped=1, placed=2",
+        "shown": ["# mutation in a temporary copy of the private app/main.py:",
+                  "#   existing = <the focus points already on the preview>",
+                  "#   ->  existing = []   # MUTATION: existing focus points ignored - click anyway"],
+    },
 }
 
 
