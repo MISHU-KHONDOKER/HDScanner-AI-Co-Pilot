@@ -96,10 +96,14 @@ a false success claim.
 Checked by hand in a [seven-step walkthrough](docs/M3_walkthrough.md) with the real
 terminal output of every run.
 
-**First fix proven on the twin:** [the false success claim, fixed](docs/demo_s11_fix.md)
-— real result files checked first (they showed the obvious fix would have been
-wrong), then the guard switched off on purpose to prove the scenario catches it.
-Now [12 of 13 pass, 1 open](docs/m3_first_runs.md).
+**Both weaknesses fixed and proven on the twin** — each with the fix switched
+off on purpose to prove the scenario catches it:
+- [the false success claim](docs/demo_s11_fix.md) — real result files checked
+  first; they showed the obvious fix would have been wrong;
+- [a "look only" tool that quietly changed the machine](docs/demo_s12_fix.md) —
+  a real field incident, now an honest refusal.
+
+Now [13 of 13 scenarios pass](docs/m3_first_runs.md).
 
 ### Publishing safely
 

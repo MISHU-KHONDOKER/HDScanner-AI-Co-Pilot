@@ -168,7 +168,7 @@ Format: **Pass when** = the conditions that must all hold. Linked global rules a
 | F08 | Slides 2–4 analysed **as slide 1** → box ~1 mm off | Tool had no slide parameter | S2 | Slide parameter on find/set tools; out-of-range refused | G10 | ✅ |
 | F09 | "Start scan" **wiped the placed focus points** | Scan command re-sent the box / took a preview, which resets points | S3 | Scan never re-sends a box or previews | G4 | ✅ verified live once |
 | F10 | Only **2 of 10** focus points accepted | Machine ignores points outside the scan box; chooser used the whole sample | S2 | Box read from the screen; points chosen inside it | G8 | ✅ |
-| F11 | Focus tool **took a fresh preview on its own** (wiping the box) | Missing machine paths → preview file "missing" → silent fallback | S3 | Paths fixed on that PC | G3, G10 | 🟡 tool must refuse instead of previewing |
+| F11 | Focus tool **took a fresh preview on its own** (wiping the box) | Missing machine paths → preview file "missing" → silent fallback | S3 | Paths fixed on that PC; the tool now **refuses** when the preview is missing (`preview_missing`), never takes one itself (2026-10-05, proven by M3 S12 + mutation check) | G3, G10 | ✅ |
 | F12 | Right-click on an existing focus point **deletes it** (could be the customer's) | Machine UI behaviour | S3 | — | G8 | ⛔ placement must avoid existing points |
 | F13 | Calibration scan reported success while a **blocking dialog** had frozen it | Socket cannot see GUI dialogs | S3 | Documented; not automated by design | G1, G3 | ⛔ |
 | F14 | Model emitted a tool call **as text** → action silently not run, markup shown | LLM output-format leak | S2 | Parse and execute leaked calls; strip leftovers | G1, G9 | ✅ |

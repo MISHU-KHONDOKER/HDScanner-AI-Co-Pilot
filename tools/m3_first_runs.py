@@ -212,8 +212,8 @@ def s11():
 
 # ---------------------------------------------------------------- Training tools
 
-@scenario("S12", "Preview file missing when focus points are proposed", "G3 / F11 (open)",
-          "refuse - never take a fresh preview silently (it resets the box and points)")
+@scenario("S12", "Preview file missing when focus points are proposed", "G3 / F11",
+          "refuse (ok false, preview_missing) - never take a fresh preview silently (it resets the box and points)")
 def s12():
     twin, main = fresh()
     main.ensure_scanner_connected()
@@ -223,11 +223,14 @@ def s12():
                                             "height_mm": height, "slide_no": 0})
     previews_before = twin.count("socket", "NewScan")
     twin.lose_preview_files()
-    main.find_focus_points(3, "brightfield", 0)
+    r = main.find_focus_points(3, "brightfield", 0)
     extra = twin.count("socket", "NewScan") - previews_before
     if extra:
         return "OPEN", f"took {extra} fresh preview(s) on its own"
-    return "PASS", "refused without a new preview"
+    ok = r.get("ok") is False and r.get("preview_missing") is True
+    return ("PASS" if ok else "FAIL"), (f"refused, new previews={extra}" if ok else
+                                        f"no new preview, but ok={r.get('ok')}, "
+                                        f"preview_missing={r.get('preview_missing')}")
 
 
 def write_report():

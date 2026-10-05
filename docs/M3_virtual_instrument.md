@@ -109,8 +109,8 @@ Full table: **[m3_first_runs.md](m3_first_runs.md)**.
 
 | | Result |
 |---|---|
-| ✅ Pass (12) | clean scan; another machine's config refused before any write; wrong-mode config refused; **scrambled settings repaired** (4 settings, backup made, live values = good file); success judged from the result file, not the status code; no restart and no second scan after an ambiguous stop; frozen scan reported as still scanning, never retried; faint sample → "not found"; empty position → "no slide"; scanner not running → started once, then scanned; harness safety; **no blind scan when focus fails and the automatic grid is off (S11, fixed 2026-10-05)** |
-| 🟡 Open (1) | **S12 / F11** — with the preview file missing, the focus tool silently takes a new preview, which resets the scan box and points. |
+| ✅ Pass (13) | clean scan; another machine's config refused before any write; wrong-mode config refused; **scrambled settings repaired** (4 settings, backup made, live values = good file); success judged from the result file, not the status code; no restart and no second scan after an ambiguous stop; frozen scan reported as still scanning, never retried; faint sample → "not found"; empty position → "no slide"; scanner not running → started once, then scanned; harness safety; **no blind scan when focus fails and the automatic grid is off (S11, fixed 2026-10-05)**; **focus tool refuses when the preview is missing, takes no preview itself (S12, fixed 2026-10-05)** |
+| 🟡 Open (0) | — (first run: S11 / F25 and S12 / F11 — both fixed, see below) |
 | ❌ Fail (0) | — |
 
 The two open results of the first run were not surprises — both were in the M1
@@ -147,6 +147,21 @@ Step by step with the real terminal output: **[S11 fix demo](demo_s11_fix.md)**.
 **Still to do:** one controlled real scan without focus, to see what the scanner
 really writes — then correct the twin's result file, and decide whether a check
 *after* the scan is needed as well.
+
+### S12 fixed (2026-10-05) — a "look only" tool that changed the machine
+
+**First run:** OPEN — with the preview file missing, `find_focus_points` took a
+new preview on its own, which resets the scan box and the focus points. This
+happened on a real scanner PC whose machine paths were wrong (F11): the fallback
+wiped the user's box *and* hid the configuration error.
+
+**Fix:** the tool refuses (`ok: false, preview_missing: true`) with a message
+naming the file it looked for, and takes no preview. S12 now also requires that
+answer, not only "no new preview".
+
+**Proof:** S12 OPEN → PASS; **all 13 scenarios pass**; mutation check — with the
+old fallback put back in a temporary copy, S12 goes back to OPEN. Step by step
+with the real terminal output: **[S12 fix demo](demo_s12_fix.md)**.
 
 **Checked by hand:** [M3 walkthrough](M3_walkthrough.md) — seven steps with the
 real terminal output of each run, including breaking the harness on purpose.

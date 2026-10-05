@@ -1,0 +1,15 @@
+PS <project>\MISHU_KHONDOKER> ..\venv\Scripts\python tools\m3_first_runs.py
+PASS  S0 Harness refuses an unswapped door and blocks the real scanner port  ->  refused=True, port blocked=True
+PASS  S1 Clean scanner, brightfield slide 1  ->  OK, scans=1, tiles=132
+PASS  S2 Good config belongs to ANOTHER machine  ->  CONFIG, config changed=False, closes=0
+PASS  S3 Good config is the OTHER imaging mode  ->  CONFIG, config changed=False
+PASS  S4 Settings scrambled (in-house scramble test)  ->  OK, fixed=4, live repaired=True, backups=1
+PASS  S5 Scanner reports the simulator's code 1 instead of 0  ->  OK
+PASS  S6 ScanStopped arrives at once, result file only later  ->  NO-RESULT, scans=1, restarts after scan=0
+PASS  S7 Calibration dialog freezes the scan  ->  STILL-SCANNING, scans=1, restarts after scan=0
+PASS  S8 Very faint sample  ->  NO-SAMPLE, level=2
+PASS  S9 No slide in the requested position  ->  NO-SLIDE, level=2
+PASS  S10 Scanner software not running at the start  ->  OK, starts=1
+PASS  S11 Focus clicks fail AND the good config has the automatic grid off  ->  FOCUS-POINTS, scans=0
+PASS  S12 Preview file missing when focus points are proposed  ->  refused, new previews=0
+report: docs/m3_first_runs.md
