@@ -86,7 +86,7 @@ same scenario.
 
 > **Update 2026-10-05:** S11 is fixed — no blind scan any more (`FOCUS-POINTS,
 > scans=0`), proven with a mutation check. How, and why the obvious fix would
-> have been wrong: [M3 — S11 fixed](M3_virtual_instrument.md#s11-fixed-2026-10-05--and-what-the-real-result-files-taught-first).
+> have been wrong: [S11 fix demo](demo_s11_fix.md).
 
 **Learned.** In M2 the licence-key guard was proven as a single function. Here
 it is proven **inside the whole customer pipeline**, with the real co-pilot

@@ -142,6 +142,7 @@ no scan. S11 was tightened to require exactly that (`FOCUS-POINTS, scans=0`).
 
 **Proof:** S11 OPEN → PASS; S0–S10 unchanged; **mutation check** — with the new
 guard commented out, S11 goes straight back to OPEN with the old false success.
+Step by step with the real terminal output: **[S11 fix demo](demo_s11_fix.md)**.
 
 **Still to do:** one controlled real scan without focus, to see what the scanner
 really writes — then correct the twin's result file, and decide whether a check

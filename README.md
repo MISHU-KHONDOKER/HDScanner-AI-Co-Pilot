@@ -91,10 +91,15 @@ proves. See [M2 — Test foundation](docs/M2_test_foundation.md).
 A [virtual scanner](docs/M3_virtual_instrument.md) that the **real, unchanged co-pilot**
 drives end to end, with real failures switched on at will (another machine's config,
 a scan frozen behind a dialog, a lying status message, scrambled settings). First
-result: [11 of 13 scenarios pass, 2 known open failure modes reproduced](docs/m3_first_runs.md)
-— including a false success claim that is now provable and fixable.
+result: 11 of 13 scenarios passed, 2 known open failure modes reproduced — including
+a false success claim.
 Checked by hand in a [seven-step walkthrough](docs/M3_walkthrough.md) with the real
 terminal output of every run.
+
+**First fix proven on the twin:** [the false success claim, fixed](docs/demo_s11_fix.md)
+— real result files checked first (they showed the obvious fix would have been
+wrong), then the guard switched off on purpose to prove the scenario catches it.
+Now [12 of 13 pass, 1 open](docs/m3_first_runs.md).
 
 ### Publishing safely
 
