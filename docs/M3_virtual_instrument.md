@@ -70,6 +70,19 @@ the build log at the time.
 | A foreign licence key in config.ini → the software refuses to start | real scanner | 2026-09-30 |
 | Settings accept only the values the software offers | real scanner | 2026-09-22 / 23 |
 | Config key names (`[Setup] AntiBlur / FocusDensity / StitchMode`, `[Slide] Type`) | real config files | 2026-09-28 |
+| Result file `[Focus]` after a focused scan: one line per point in **µm** (`x/y/zum -0.0`), a fitted plane `Z=…`, `StdDev`, `Excluded`, and `Failed=0` or `Failed=1` — **`1` also on a sharp scan**, so it is not a verdict | real scanner, 3 result files | 2026-09-26 / 30 |
+
+**Not yet observed — assumptions, marked as such in the code and the tests:**
+
+| Twin behaviour | Why it is an assumption |
+|---|---|
+| Focus by the scanner's own grid only (no placed points): a plane, no point lines | every real result file seen had placed points |
+| No focus at all: no point lines, no plane, `Failed` = every tile | no real unfocused scan exists yet; one controlled test scan will replace this row with an observation |
+
+No scenario's verdict depends on these two rows: the S11 fix stops the scan
+*before* a result file exists. (Until 2026-10-05 the twin wrote focus points in
+pixels and an invented `Failed` count — found while fixing S11 and corrected
+here, with a test for each format.)
 
 **Simplified on purpose:** previews are synthetic drawings (from M2); the scan is
 instant and always 132 tiles; option lists for anti-blur and focus density are

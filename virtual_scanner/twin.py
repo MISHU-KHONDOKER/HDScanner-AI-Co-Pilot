@@ -55,6 +55,35 @@ def _write_ini(path, sections):
     Path(path).write_text("\n".join(lines), encoding="utf-8")
 
 
+# Real preview scale: 75.0 mm across a 1882 px preview (real scanner config).
+UM_PER_PREVIEW_PX = 75000 / 1882
+FOCUS_Z_UM = 2250.0           # real focus heights were 2240-2310 um
+
+
+def _focus_section(points, auto_grid, tiles):
+    """The result file's [Focus] section.
+
+    OBSERVED (3 real Customer scans, 2026-09-26..30, all sharp): one line per focus
+    point "x/y/zum -0.0" in micrometres, a fitted plane "Z=aX+bY+c", StdDev,
+    Excluded, and Failed=0 or Failed=1 - Failed=1 on a SHARP scan, so it is not a
+    verdict. Positions here are preview px x the real scale; the stage offset is
+    not modelled (nothing reads the numbers).
+
+    ASSUMPTIONS (no real file seen yet - see docs/M3_virtual_instrument.md):
+    - focus by the scanner's own grid only (no placed points): plane, no F lines;
+    - no focus at all: no F lines, no plane, Failed = every tile.
+    """
+    plane = {"Z": f"0.000000X+0.000000Y+{FOCUS_Z_UM:.6f}", "StdDev": "0.00",
+             "Excluded": "0", "Failed": "0"}
+    if points:
+        lines = {f"F{i}": f"{x * UM_PER_PREVIEW_PX:.1f}/{y * UM_PER_PREVIEW_PX:.1f}/{FOCUS_Z_UM:.1f}um -0.0"
+                 for i, (x, y) in enumerate(points)}
+        return {**lines, **plane}
+    if auto_grid:
+        return plane                          # ASSUMPTION
+    return {"Failed": str(tiles)}             # ASSUMPTION
+
+
 def _read_ini(path):
     cp = configparser.RawConfigParser(strict=False, interpolation=None)
     cp.optionxform = str
@@ -254,14 +283,12 @@ class VirtualScanner:
             folder = self.results / datetime.now().strftime("%Y-%m-%d") / sample_id
             folder.mkdir(parents=True, exist_ok=True)
             auto_grid = self.live.get("FocusDensity", "0") != "0"
-            focused = len(points) > 0 or auto_grid
             tiles = 132
             _write_ini(folder / "Scan.txt", {
                 "General": {"SlideID": sample_id, "SlideType": self.live.get("SlideType"),
                             "Magnification": "20X", "RowCount": "11", "ColumnCount": "12",
                             "Quantity": str(tiles), "ScanStopped": "0", "StitchMode": "2"},
-                "Focus": {**{f"F{i}": f"{x}/{y}/0.0px" for i, (x, y) in enumerate(points)},
-                          "Failed": "0" if focused else str(tiles)},
+                "Focus": _focus_section(points, auto_grid, tiles),
                 "Camera": {"ExpoTime": "1212", "ExpoGain": "1"},
             })
         self.pending_results = keep

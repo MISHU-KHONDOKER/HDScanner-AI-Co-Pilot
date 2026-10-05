@@ -70,6 +70,33 @@ def test_real_scanner_reports_zero_on_a_perfect_scan(twin):  # real, 2026-09-30
     assert list(twin.results.glob("*/S1/Scan.txt"))
 
 
+def _focus_of(twin, sample_id):
+    import configparser
+    cp = configparser.RawConfigParser()
+    cp.optionxform = str
+    cp.read(next(twin.results.glob(f"*/{sample_id}/Scan.txt")), encoding="utf-8")
+    return dict(cp["Focus"])
+
+
+def test_focused_result_file_has_the_real_format(twin):      # real Scan.txt, 2026-09-26..30
+    twin.socket.new_scan()
+    x, y, w, h = twin.box_px()
+    twin.gui.place_focus_points_by_click([[x + w // 3, y + h // 2], [x + 2 * w // 3, y + h // 2]], slide=0)
+    twin.socket.start_scan(0, "S1")
+    focus = _focus_of(twin, "S1")
+    assert [k for k in focus if k.startswith("F") and k[1:].isdigit()] == ["F0", "F1"]
+    assert all(focus[k].endswith("um -0.0") and focus[k].count("/") == 2 for k in ("F0", "F1"))
+    assert focus["Z"].startswith("0.000000X") and focus["StdDev"] == "0.00"
+    assert focus["Excluded"] == "0" and focus["Failed"] in ("0", "1")   # 1 seen on a SHARP scan
+
+
+def test_unfocused_result_is_marked_as_an_assumption(twin):  # ASSUMPTION - no real file yet
+    twin.live["FocusDensity"] = "0"
+    twin.socket.new_scan()
+    twin.socket.start_scan(0, "S2")
+    assert _focus_of(twin, "S2") == {"Failed": "132"}
+
+
 def test_simulator_code_fault(tmp_path):
     t = VirtualScanner(tmp_path, faults=("simulator_result_code",))
     t.socket.connect()
