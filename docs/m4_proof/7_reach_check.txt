@@ -1,0 +1,17 @@
+PS <project>> <private>\venv\Scripts\python tools\m4_reach_check.py
+REACHABLE  E1   Clean scanner, customer asks for a scan                    OK              scans=1, stops=0, quality=needs_customer
+REACHABLE  E2   The good settings file belongs to another machine          CONFIG          scans=0
+REACHABLE  E3   The scan keeps starting over (X-speed too high, also in th OK              scans=2, stops=1, quality=needs_customer
+REACHABLE  E4   Settings changed in the window and saved (the scramble tes OK              scans=1, quality=needs_customer
+REACHABLE  E5   The customer asks for a slide position that is empty       NO-SLIDE        scans=0, level=2
+REACHABLE  E6   The scanner software is not running at the start           OK              scans=1, quality=needs_customer
+REACHABLE  E7   'Stopped' arrives at once, the result file only much later NO-RESULT       scans=1
+REACHABLE  E8   A calibration dialog freezes the scan                      STILL-SCANNING  scans=1
+REACHABLE  E9   Focus points cannot be placed AND the automatic focus is o FOCUS-POINTS    scans=0, level=3
+REACHABLE  E10  A very faint sample (known limitation F20)                 NO-SAMPLE       scans=0, level=2
+REACHABLE  E11  The customer names the slide at once: 'scan slide 1'       OK              scans=1, quality=needs_customer
+REACHABLE  E12  The customer writes in Chinese                             OK              scans=1, quality=needs_customer
+REACHABLE  E13  First batch end to end: 'yes', then a second scan is accep OK              scans=2, quality=good, reference_saved=True
+REACHABLE  E14  First batch: the customer says the scan looks wrong        OK              scans=1, reference_saved=False
+
+14 of 14 scenarios reachable

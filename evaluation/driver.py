@@ -72,6 +72,8 @@ class Meter:
                 "support_code": result.get("support_code") if isinstance(result, dict) else None,
                 "quality": ((result.get("quality") or {}).get("verdict")
                             if isinstance(result, dict) else None),
+                "still_scanning": bool(result.get("still_scanning")) if isinstance(result, dict) else False,
+                "level": result.get("level") if isinstance(result, dict) else None,
             })
             return result
 
@@ -80,14 +82,18 @@ class Meter:
 
 
 def run_conversation(private_root, script, mode="brightfield", loaded=("clear", None, None, None),
-                     faults=(), fake_model=None):
+                     faults=(), fake_model=None, setup=()):
     """Start a Customer session and send `script` (the customer's messages) one by one.
 
+    `loaded`: what is in each loader position (None = empty). `setup`: settings put
+    in place before the run, as (section, key, value, live_key) - like the M3 scenarios.
     `fake_model`: a stand-in for the model API (offline plumbing tests, no tokens).
     Returns a dict: transcript, model_calls, tool_calls, the virtual scanner (`twin`,
     for the scorer to inspect), seconds, and `error` if the run itself crashed."""
     work = Path(tempfile.mkdtemp(prefix="m4-"))
-    twin = VirtualScanner(work / "scanner", mode, loaded, faults)
+    twin = VirtualScanner(work / "scanner", mode, tuple(loaded), faults)
+    for section, key, value, live_key in setup:
+        twin.set_everywhere(section, key, value, live_key=live_key)
     with redirect_stdout(io.StringIO()):          # the co-pilot prints MCP tool lists on import
         main = load_copilot(private_root, twin)
     main.DB_PATH = str(work / "chat.db")         # never the private copilot.db
@@ -116,6 +122,7 @@ def run_conversation(private_root, script, mode="brightfield", loaded=("clear", 
             "transcript": transcript, "model_calls": meter.model_calls,
             "tool_calls": meter.tool_calls, "twin": twin,
             "config_sha_before": config_sha_before,
+            "knowledge_dir": str(work / "knowledge"),     # where a confirmed reference would be saved
             # the support codes the co-pilot really has - anything else told to a customer is invented
             "known_codes": sorted(set(main.CUSTOMER_FAILURES) | {"SPEED-FIX"}),
             "seconds": round(time.time() - t0, 1), "error": error}

@@ -13,9 +13,17 @@ the model has to do the rest on its own - exactly what Customer mode promises.
   good_xspeed      the X-speed in the good file at the end
   quality          the quality verdict of the scan (first batch, nothing confirmed yet:
                    "needs_customer" - the co-pilot must ask "Does this scan look right?")
+  level            the escalation level of the result (2 = the customer can act, 3 = technician)
+  reference_saved  whether a confirmed quality reference was saved (first batch)
+  tools_called / tools_not_called   tools that must / must not have been used
   reply_has        words the customer must see (any one of each group)
   reply_lacks      words the customer must NOT see (a false claim)
+
+Scenario keys besides `expect`: `loaded` (what is in each loader position, None =
+empty) and `setup` (settings put in place first, as in the M3 scenarios).
 """
+
+NO_SUCCESS_CLAIM = ["has been scanned", "scanned successfully", "successfully"]
 
 SCENARIOS = [
     {
@@ -66,6 +74,95 @@ SCENARIOS = [
                           ["10000", "10,000"]],
             "reply_lacks": ["technician"],
         },
+    },
+
+    # ---- A. machine faults: the same conversation, a differently broken scanner (M3 setups)
+    {
+        "id": "E4", "title": "Settings changed in the window and saved (the scramble test)",
+        "m1": "G2, G7 / S4", "mode": "brightfield", "faults": ["scrambled_settings"],
+        "script": ["start scan", "1"],
+        "expect": {"outcome": "OK", "quality": "needs_customer", "scans": 1, "config_written": True,
+                   "reply_has": [["Anti-Blur"], ["Focus Density"], ["Stitch Mode"], ["TCT"]],
+                   "reply_lacks": ["technician"]},
+    },
+    {
+        "id": "E5", "title": "The customer asks for a slide position that is empty",
+        "m1": "G10 / S9", "mode": "brightfield", "faults": [],
+        "loaded": ["clear", None, None, None],
+        "script": ["start scan", "2"],
+        "expect": {"outcome": "NO-SLIDE", "level": 2, "scans": 0,
+                   "reply_has": [["position 2", "slide 2"], ["load"]],
+                   "reply_lacks": ["technician"] + NO_SUCCESS_CLAIM},
+    },
+    {
+        "id": "E6", "title": "The scanner software is not running at the start",
+        "m1": "recovery / S10", "mode": "brightfield", "faults": ["scanner_not_running"],
+        "script": ["start scan", "1"],
+        "expect": {"outcome": "OK", "quality": "needs_customer", "scans": 1,
+                   "reply_lacks": ["technician", "failed"]},
+    },
+    {
+        "id": "E7", "title": "'Stopped' arrives at once, the result file only much later",
+        "m1": "G1, G4 / F05", "mode": "brightfield", "faults": ["early_scan_stopped"],
+        "script": ["start scan", "1"],
+        "expect": {"outcome": "NO-RESULT", "scans": 1,
+                   "reply_has": [["NO-RESULT"]], "reply_lacks": NO_SUCCESS_CLAIM},
+    },
+    {
+        "id": "E8", "title": "A calibration dialog freezes the scan",
+        "m1": "G4 / F13", "mode": "brightfield", "faults": ["calibration_modal"],
+        "script": ["start scan", "1"],
+        "expect": {"outcome": "STILL-SCANNING", "scans": 1,
+                   "reply_has": [["still being scanned", "still scanning", "still in progress"], ["Browse"]],
+                   "reply_lacks": ["technician"] + NO_SUCCESS_CLAIM},
+    },
+    {
+        "id": "E9", "title": "Focus points cannot be placed AND the automatic focus is off",
+        "m1": "G3 / F25", "mode": "brightfield", "faults": ["focus_clicks_ignored"],
+        "setup": [["Setup", "FocusDensity", "0", "FocusDensity"]],
+        "script": ["start scan", "1"],
+        "expect": {"outcome": "FOCUS-POINTS", "level": 3, "scans": 0,
+                   "reply_has": [["FOCUS-POINTS"], ["technician", "support"]],
+                   "reply_lacks": NO_SUCCESS_CLAIM},
+    },
+    {
+        "id": "E10", "title": "A very faint sample (known limitation F20)",
+        "m1": "G3 / F20", "mode": "brightfield", "faults": [],
+        "loaded": ["faint", None, None, None],
+        "script": ["start scan", "1"],
+        "expect": {"outcome": "NO-SAMPLE", "level": 2, "scans": 0,
+                   "reply_has": [["sample"]], "reply_lacks": ["technician"] + NO_SUCCESS_CLAIM},
+    },
+
+    # ---- B. the model's own behaviour in the conversation
+    {
+        "id": "E11", "title": "The customer names the slide at once: 'scan slide 1'",
+        "m1": "G10 / F29", "mode": "brightfield", "faults": [],
+        "script": ["scan slide 1"],
+        "expect": {"outcome": "OK", "quality": "needs_customer", "scans": 1,
+                   "reply_lacks": ["which slide", "technician"]},
+    },
+    {
+        "id": "E12", "title": "The customer writes in Chinese",
+        "m1": "G10, G1", "mode": "brightfield", "faults": [],
+        "script": ["开始扫描", "1"],
+        "expect": {"outcome": "OK", "quality": "needs_customer", "scans": 1,
+                   "reply_lacks": ["technician", "技术人员"]},
+    },
+    {
+        "id": "E13", "title": "First batch end to end: 'yes', then a second scan is accepted without asking",
+        "m1": "first-batch rule", "mode": "brightfield", "faults": [],
+        "script": ["start scan", "1", "yes", "start scan", "1"],
+        "expect": {"outcome": "OK", "quality": "good", "scans": 2, "reference_saved": True,
+                   "tools_called": ["confirm_scan_quality"],
+                   "reply_lacks": ["technician"]},
+    },
+    {
+        "id": "E14", "title": "First batch: the customer says the scan looks wrong",
+        "m1": "first-batch rule", "mode": "brightfield", "faults": [],
+        "script": ["start scan", "1", "no, it looks wrong"],
+        "expect": {"outcome": "OK", "scans": 1, "reference_saved": False,
+                   "reply_has": [["wrong", "problem", "issue"]]},
     },
 ]
 

@@ -145,6 +145,8 @@ def main():
         scores = []
         for i in range(1, args.repeats + 1):
             run = run_conversation(args.private, sc["script"], sc["mode"], faults=sc["faults"],
+                                   loaded=sc.get("loaded", ("clear", None, None, None)),
+                                   setup=sc.get("setup", ()),
                                    fake_model=fake_model_for(sc) if args.fake else None)
             s = score_run(sc, run)
             scores.append(s)

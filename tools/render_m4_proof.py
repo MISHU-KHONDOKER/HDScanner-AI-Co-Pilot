@@ -25,6 +25,8 @@ TITLES = {
     "4_second_real_run": "M4 - the same 6 conversations again, after the fixes",
     "5_f29_fix": "F29 fixed - no scan with a slide the customer did not name (guard on / off / on)",
     "6_f30_fix": "F30 fixed - a customer never sees a support code the co-pilot does not have",
+    "7_reach_check": "M4 - 14 scenarios: every machine end state reachable (stand-in model, no cost)",
+    "8_new_scenarios_real_run": "M4 - the 11 new scenarios with the real model: 22 conversations",
 }
 
 m3_colour = rw.colour                            # kept before main() swaps it for colour()
@@ -38,7 +40,11 @@ def colour(line):
         return (255, 110, 110), True
     if s.startswith("why:"):
         return (255, 200, 80), False
-    if s.startswith(("TOTAL:", "scorer judged")):
+    if s.startswith("REACHABLE"):
+        return (90, 220, 120), False
+    if s.startswith("PROBLEM"):
+        return (255, 110, 110), True
+    if s.startswith(("TOTAL:", "scorer judged")) or s.endswith("scenarios reachable"):
         return (230, 230, 230), True
     if s.startswith(("F29 fix PROVEN", "F30 fix PROVEN")) or re.match(r"\d\. (guard|check) ON", s):
         return (90, 220, 120), True
