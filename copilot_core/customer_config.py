@@ -5,6 +5,8 @@
   restore_good_config()  back up → close HDScanner → write the good values → start
                          HDScanner → wait for it → compare again (step 4b).
                          CUSTOMER MODE ONLY — Training never restarts the scanner.
+  lower_xspeed_in_good_file()  "same area again and again": X-speed of the lens in
+                         use -> 10000 in the GOOD file (backup first), so it sticks.
 
 Which files:
   live  = HDSCANNER_CONFIG from .env, else <HDSCANNER_DIR>/config.ini
@@ -38,6 +40,20 @@ LIVE_CONFIG = os.getenv("HDSCANNER_CONFIG") or os.path.join(HDSCANNER_DIR, "conf
 GOOD_CONFIG = os.path.join(   # a relative .env path is relative to the project folder
     _PROJECT_DIR,
     os.getenv("GOOD_CONFIG") or os.path.join("knowledge", "fluorescence_known_good_config.ini"))
+
+
+# Every backup the copilot makes goes into this folder NEXT TO the file it backs up
+# (HDScanner's folder for config.ini, knowledge\ for a good file) — not loose beside
+# config.ini, where they piled up (Mishu, 2026-10-08). File names are unchanged.
+BACKUP_DIR_NAME = "copilot_config_backup"
+
+
+def _backup_path(original: str, tag: str) -> str:
+    """<folder of original>\\copilot_config_backup\\<name>.<tag>-<time>; the folder is
+    created when missing (an OSError here is handled like a failed copy)."""
+    folder = os.path.join(os.path.dirname(original), BACKUP_DIR_NAME)
+    os.makedirs(folder, exist_ok=True)
+    return os.path.join(folder, f"{os.path.basename(original)}.{tag}-{datetime.now():%Y%m%d-%H%M%S}")
 
 
 def good_config_for(mode):
@@ -352,8 +368,8 @@ def restore_good_config(live_path: str = LIVE_CONFIG, good_path: str = GOOD_CONF
         return {"ok": True, "restored": False, "restarted": False, "fixed": 0,
                 "note": "Config already matches the good file — nothing to do."}
 
-    backup_path = f"{live_path}.customer-backup-{datetime.now():%Y%m%d-%H%M%S}"
     try:
+        backup_path = _backup_path(live_path, "customer-backup")
         shutil.copy2(live_path, backup_path)
     except OSError as e:   # no backup → do not touch anything
         up = start_hdscanner(exe) if closed else None
@@ -394,6 +410,82 @@ def restore_good_config(live_path: str = LIVE_CONFIG, good_path: str = GOOD_CONF
                  else "HDScanner did not come back." if not up
                  else "HDScanner is back but the config still differs after its restart."),
     }
+
+
+# "Scans the same area again and again": the scan keeps starting over from the first row.
+# Fix: lower the X-speed of the lens in use to a safe value, in one go.
+# (How the safe value is worked out is field know-how and kept private.)
+# The value below is the one used on our scanners.
+SAFE_XSPEED = 10000
+
+
+def lower_xspeed_in_good_file(good_path, target=SAFE_XSPEED) -> dict:
+    """Write the safe X-speed for the lens IN USE into the GOOD file, so the next
+    restore_good_config puts it into the scanner and every later scan keeps it (only
+    the live file = the problem comes back on the next restore). Never raises.
+
+    Lens in use = [Lens] CurrentHole -> HoleMag<n> (e.g. 20X) -> [Stage] SpeedX20X.
+    Backs the good file up first (copilot_config_backup/<good>.speedfix-backup-<time>); changes ONLY that
+    one line, everything else stays byte for byte.
+
+    Returns ok, changed, lens, key, old, new, backup_path, error:
+      changed=True   the value was above target and is now target
+      changed=False  already at/below target -> X-speed is not the cause (USB cable)"""
+    if not good_path or not os.path.exists(good_path):
+        return {"ok": False, "changed": False,
+                "error": "No good config for this mode on this machine — X-speed not changed."}
+    try:
+        good = _read_ini(good_path)
+    except (OSError, configparser.Error) as e:
+        return {"ok": False, "changed": False, "error": f"Could not read the good config: {e}"}
+    hole = good.get("Lens", "CurrentHole", fallback="").strip()
+    lens = good.get("Lens", f"HoleMag{hole}", fallback="").strip() if hole else ""
+    key = f"SpeedX{lens}"
+    if not lens or not good.has_option("Stage", key):
+        return {"ok": False, "changed": False, "lens": lens or None, "key": key,
+                "error": f"Could not tell the X-speed of the lens in use (CurrentHole={hole!r}, "
+                         f"lens={lens!r}, no [Stage] {key}) — nothing changed."}
+    old_text = good.get("Stage", key).strip()
+    try:
+        old = float(old_text)
+    except ValueError:
+        return {"ok": False, "changed": False, "lens": lens, "key": key,
+                "error": f"[Stage] {key}={old_text!r} is not a number — nothing changed."}
+    result = {"ok": True, "lens": lens, "key": key, "old": old_text, "new": old_text}
+    if old <= target:
+        return {**result, "changed": False}
+
+    try:
+        backup_path = _backup_path(good_path, "speedfix-backup")
+        shutil.copy2(good_path, backup_path)
+    except OSError as e:     # no backup -> do not touch the good file
+        return {**result, "ok": False, "changed": False,
+                "error": f"Backup of the good config failed, nothing changed: {e}"}
+    try:
+        with open(good_path, "r", encoding="utf-8-sig", newline="") as f:
+            lines = f.read().splitlines(keepends=True)
+        out, section, done = [], None, False
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("[") and stripped.endswith("]"):
+                section = stripped[1:-1]
+            elif (section == "Stage" and not done and "=" in line
+                  and line.split("=", 1)[0].strip() == key):
+                ending = line[len(line.rstrip("\r\n")):]
+                line, done = f"{key}={target}{ending}", True
+            out.append(line)
+        with open(good_path, "w", encoding="utf-8", newline="") as f:
+            f.write("".join(out))
+        now = _read_ini(good_path).get("Stage", key).strip()
+    except (OSError, configparser.Error) as e:
+        shutil.copy2(backup_path, good_path)     # put the old good file back
+        return {**result, "ok": False, "changed": False, "backup_path": backup_path,
+                "error": f"Writing the good config failed, old file put back: {e}"}
+    if not done or now != str(target):
+        shutil.copy2(backup_path, good_path)
+        return {**result, "ok": False, "changed": False, "backup_path": backup_path,
+                "error": f"[Stage] {key} did not read back as {target} — old file put back."}
+    return {**result, "changed": True, "new": now, "backup_path": backup_path}
 
 
 if __name__ == "__main__":

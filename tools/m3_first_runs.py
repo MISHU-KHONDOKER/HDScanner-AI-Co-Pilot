@@ -129,8 +129,11 @@ def s4():
     twin, main = fresh(faults=("scrambled_settings",))
     r = main.auto_scan(1, "brightfield")
     step = next((s for s in r.get("steps", []) if s.get("step") == "config"), {})
-    live_ok = twin.live == {"AntiBlur": "10", "FocusDensity": "4", "StitchMode": "2", "SlideType": "TCT"}
-    backups = len(list(twin.root.glob("config.ini.customer-backup-*")))
+    want = {"AntiBlur": "10", "FocusDensity": "4", "StitchMode": "2", "SlideType": "TCT"}
+    live_ok = {k: twin.live.get(k) for k in want} == want
+    # Backups go into copilot_config_backup/ next to config.ini since 2026-10-08 (loose before).
+    backups = len(list(twin.root.glob("config.ini.customer-backup-*"))
+                  + list(twin.root.glob("copilot_config_backup/config.ini.customer-backup-*")))
     ok = code(r) == "OK" and step.get("fixed") == 4 and live_ok and backups == 1
     return ("PASS" if ok else "FAIL"), f"{code(r)}, fixed={step.get('fixed')}, live repaired={live_ok}, backups={backups}"
 
@@ -254,6 +257,48 @@ def s13():
     ok = kept and skipped == 1 and r.get("verified_count") == 2
     return ("PASS" if ok else "FAIL"), (f"customer's point kept, skipped={skipped}, "
                                         f"placed={r.get('verified_count')}")
+
+
+def good_xspeed(twin):
+    cfg = configparser.RawConfigParser(strict=False)
+    cfg.optionxform = str
+    cfg.read(twin.good_config_for("brightfield"), encoding="utf-8")
+    return cfg.get("Stage", "SpeedX20X", fallback=None)
+
+
+@scenario("S14", "Scan keeps starting over from row 1 (X-speed too high, also in the good file)",
+          "G4, G7, G1 / F28",
+          "caught during the scan; stopped (confirmed); X-speed lowered in the good file with a "
+          "backup; settings restored; scanned once more; customer told what happened and what changed")
+def s14():
+    twin, main = fresh(faults=("xspeed_too_high",))
+    r = main.auto_scan(1, "brightfield")
+    stops = twin.count("mcp", "MCP_Stop")
+    scans = twin.count("socket", "StartScan")
+    good = good_xspeed(twin)
+    backups = list(twin.root.glob("copilot_config_backup/good_brightfield.ini.speedfix-backup-*"))
+    backup_old = bool(backups) and "SpeedX20X=30000" in backups[0].read_text(encoding="utf-8")
+    listed = "X-speed (20X lens): 30000 → 10000" in (r.get("settings_changed_text") or "")
+    ok = (code(r) == "OK" and stops == 1 and scans == 2 and good == "10000" and backup_old
+          and listed and bool(r.get("same_area_message")) and twin.live.get("SpeedX20X") == "10000")
+    return ("PASS" if ok else "FAIL"), (f"{code(r)}, stops={stops}, scans={scans}, good file X-speed={good}, "
+                                        f"backup with old value={backup_old}, listed={listed}, "
+                                        f"message={'yes' if r.get('same_area_message') else 'no'}")
+
+
+@scenario("S15", "Same as S14, but the scanner does not confirm the Stop", "G4, G3 / F28",
+          "SAME-AREA-NOT-STOPPED (level 2: press Stop); nothing restarted, restored or written; 1 scan only")
+def s15():
+    twin, main = fresh(faults=("xspeed_too_high", "stop_not_confirmed"))
+    r = main.auto_scan(1, "brightfield")
+    t_stop = next((i for i, (d, a, _) in enumerate(twin.log) if d == "mcp" and a == "MCP_Stop"), None)
+    after = twin.log[t_stop + 1:] if t_stop is not None else []
+    touched = [a for d, a, _ in after if d == "process" or (d == "socket" and a in ("StartScan", "NewScan"))]
+    good = good_xspeed(twin)
+    ok = (code(r) == "SAME-AREA-NOT-STOPPED" and r.get("level") == 2 and t_stop is not None
+          and not touched and good == "30000" and twin.count("socket", "StartScan") == 1)
+    return ("PASS" if ok else "FAIL"), (f"{code(r)}, level={r.get('level')}, actions after Stop={touched or 'none'}, "
+                                        f"good file X-speed={good}")
 
 
 def write_report():

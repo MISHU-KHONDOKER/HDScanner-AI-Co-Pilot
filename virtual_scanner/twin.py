@@ -43,7 +43,12 @@ FAULTS = {
     "focus_clicks_ignored": "focus-point clicks are not accepted (real build, 0 of 3, 2026-09-26)",
     "scrambled_settings": "settings changed in the window and saved (the in-house scramble test)",
     "scanner_not_running": "the scanner software is not running at the start",
+    "xspeed_too_high": "F28: X-speed too high for the camera (in the good file too) -> the scan "
+                       "keeps starting over from row 1 (real scanner, 2026-10-08)",
+    "stop_not_confirmed": "Stop is accepted but the scan goes on, no ScanStopped (assumption: not seen)",
 }
+
+SAFE_XSPEED = 10000                     # above this the twin's scan starts over (F28)
 
 
 def _write_ini(path, sections):
@@ -126,7 +131,16 @@ class VirtualScanner:
             shutil.copy(self.good_bf if other == "brightfield" else self.good_fluo,
                         self.good_bf if mode == "brightfield" else self.good_fluo)
 
+        if "xspeed_too_high" in self.faults:     # how it was on the real scanner: in the good file
+            for p in (self.good_bf, self.good_fluo):
+                cfg = _read_ini(p)
+                cfg.set("Stage", "SpeedX20X", "30000")
+                with open(p, "w", encoding="utf-8") as f:
+                    cfg.write(f, space_around_delimiters=False)
+
         live_cfg = self._config(mode)
+        if "xspeed_too_high" in self.faults:
+            live_cfg["Stage"]["SpeedX20X"] = "30000"
         if "scrambled_settings" in self.faults:
             live_cfg["Setup"].update(AntiBlur="50", FocusDensity="0", StitchMode="0")
             live_cfg["Slide"]["Type"] = "Generic"
@@ -141,6 +155,8 @@ class VirtualScanner:
         self.preview_taken = False
         self.messages = []                         # (time, message) from the scanner
         self.mcp_events = []
+        self.socket_outbox = []                    # socket messages caused by another door (MCP_Stop)
+        self.round_scan = None                     # sample id of a scan going round and round (F28)
         self.pending_results = []                  # (due_time, sample_id, slide_no, focus_points)
         if "scanner_not_running" not in self.faults:
             self._start()
@@ -163,6 +179,9 @@ class VirtualScanner:
                       "Width": str(SLIDE_MM[0]), "Height": str(SLIDE_MM[1]),
                       "ScanLeft": "5.0", "ScanTop": "5.0", "ScanWidth": "5.0", "ScanHeight": "5.0"},
             "Scan": {"InputPath": "virtual", "ResultsPath": str(self.results)},
+            # Lens in use = CurrentHole -> HoleMag<n>; its X-speed is [Stage] SpeedX<mag>.
+            "Lens": {"CurrentHole": "0", "HoleMag0": "20X", "HoleMag1": "4X"},
+            "Stage": {"SpeedX20X": str(SAFE_XSPEED)},
         }
 
     def good_config_for(self, mode):
@@ -186,7 +205,9 @@ class VirtualScanner:
             "FocusDensity": cfg.get("Setup", "FocusDensity", fallback="4"),
             "StitchMode": cfg.get("Setup", "StitchMode", fallback="0"),
             "SlideType": cfg.get("Slide", "Type", fallback="Generic"),
+            "SpeedX20X": cfg.get("Stage", "SpeedX20X", fallback=str(SAFE_XSPEED)),
         }
+        self.round_scan = None
         self.scan_region_mm = [float(cfg.get("Slide", k, fallback="5")) for k in
                                ("ScanLeft", "ScanTop", "ScanWidth", "ScanHeight")]
         self.points = {i: [] for i in range(4)}
@@ -201,6 +222,7 @@ class VirtualScanner:
         cfg.set("Setup", "FocusDensity", self.live["FocusDensity"])
         cfg.set("Setup", "StitchMode", self.live["StitchMode"])
         cfg.set("Slide", "Type", self.live["SlideType"])
+        cfg.set("Stage", "SpeedX20X", self.live["SpeedX20X"])
         for k, v in zip(("ScanLeft", "ScanTop", "ScanWidth", "ScanHeight"), self.scan_region_mm):
             cfg.set("Slide", k, f"{v:.2f}")
         with open(self.config_path, "w", encoding="utf-8") as f:
@@ -262,10 +284,23 @@ class VirtualScanner:
             return []
         if slide_no >= len(self.loaded) or self.loaded[slide_no] is None:
             return [{"method": "ErrorInfo", "result": 1, "text": "no slide"}]
-        msgs = []
-        if "no_scan_started" not in self.faults:
-            msgs.append({"method": "ScanStarted", "sampleId": sample_id})
-        msgs += [{"method": "ScannedImage", "index": i} for i in range(3)]
+        # Each ScannedImage names its tile file, as on the real scanner:
+        # .../<sampleId>/Images/IMG<row>x<col>.jpg (real log, 2026-09-29..10-08).
+        images = self.results / datetime.now().strftime("%Y-%m-%d") / sample_id / "Images"
+
+        def tiles(rows, cols):
+            return [{"method": "ScannedImage", "result": (images / f"IMG{r:03d}x{c:03d}.jpg").as_posix()}
+                    for r in range(1, rows + 1) for c in range(1, cols + 1)]
+
+        started = [] if "no_scan_started" in self.faults else [{"method": "ScanStarted",
+                                                                "sampleId": sample_id}]
+        if int(float(self.live.get("SpeedX20X", SAFE_XSPEED))) > SAFE_XSPEED:
+            # F28: the stage outruns the camera; the scan breaks off and starts over from
+            # row 1 with a new ScanStarted - and never finishes by itself (real, 2026-10-08).
+            self.round_scan = sample_id
+            self.note("machine", "scan_starts_over", sample_id)
+            return started + tiles(2, 3) + started + tiles(2, 3) + started + tiles(1, 2)
+        msgs = started + tiles(1, 3)
         code = 1 if "simulator_result_code" in self.faults else 0
         msgs.append({"method": "ScanStopped", "result": code})
         due = time.time() + (self.result_delay_s if "early_scan_stopped" in self.faults else 0)
@@ -324,6 +359,11 @@ class VirtualSocketClient:
             self._inbox.append(m)
             self.received.append((t, m.get("method")))
 
+    def _pull(self):
+        """Take socket messages another door caused (e.g. ScanStopped after MCP_Stop)."""
+        msgs, self.twin.socket_outbox = self.twin.socket_outbox, []
+        self._receive(msgs)
+
     def methods_since(self, t0):
         return [m for t, m in self.received if t >= t0]
 
@@ -343,7 +383,8 @@ class VirtualSocketClient:
                                                "box": None if x is None else [x, y, w, h]})
         if self.sock is None:
             raise ConnectionResetError("not connected")
-        self._inbox = [m for m in self._inbox if m.get("method") not in ("ScanStarted", "ScanStopped")]
+        self._inbox = [m for m in self._inbox
+                       if m.get("method") not in ("ScanStarted", "ScanStopped", "ScannedImage")]
         box = None if None in (x, y, w, h) else [x, y, w, h]
         self._receive(self.twin.scan(slide_no, sample_id, box))
         started = next((m for m in self._inbox if m.get("method") == "ScanStarted"), None)
@@ -357,6 +398,37 @@ class VirtualSocketClient:
             self._inbox.remove(stopped)
         self.twin.flush_results()
         return stopped
+
+    def wait_for(self, method, timeout=60, match=None):
+        """First message of this method (and match), taken out of the inbox; None if none."""
+        self._pull()
+        for m in self._inbox:
+            if m.get("method") == method and (match is None or match(m)):
+                self._inbox.remove(m)
+                return m
+        return None
+
+    def wait_for_scan_finished_or_repeat(self, timeout=600):
+        """Same contract as the co-pilot's socket client: the ScanStopped message, or
+        {"method": "SameAreaRepeat", "tile", "tiles_before"} at the first tile file that
+        comes a second time, or None. (Door 1 is replaced in M3, so this mirrors the real
+        client's rule; the rule itself was checked on 17 recorded real scans.)"""
+        self._pull()
+        seen = set()
+        while self._inbox:
+            msg = next((m for m in self._inbox
+                        if m.get("method") in ("ScannedImage", "ScanStopped")), None)
+            if msg is None:
+                break
+            self._inbox.remove(msg)
+            if msg["method"] == "ScanStopped":
+                self.twin.flush_results()
+                return msg
+            if msg.get("result") in seen:
+                return {"method": "SameAreaRepeat", "tile": msg["result"], "tiles_before": len(seen)}
+            seen.add(msg.get("result"))
+        self.twin.flush_results()
+        return None
 
 
 class VirtualMCPClient:
@@ -402,6 +474,13 @@ class VirtualMCPClient:
                 t.preset_points = []
             else:
                 t.preset_points.append((args.get("x"), args.get("y"), args.get("z")))
+        elif name == "MCP_Stop":
+            # A scan going round and round stops and says so on the socket, like the
+            # real Stop button (ScanStopped result -1, real 2026-10-08).
+            if t.round_scan and "stop_not_confirmed" not in t.faults:
+                t.note("machine", "scan_stopped_by_stop", t.round_scan)
+                t.round_scan = None
+                t.socket_outbox.append({"method": "ScanStopped", "result": -1})
         elif name == "MCP_StartScan":
             t.mcp_events += t.scan(0, "MCP-SCAN")
         elif name == "MCP_WaitForEvent":

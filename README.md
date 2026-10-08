@@ -106,7 +106,13 @@ off on purpose to prove the scenario catches it:
   scenario for a real machine behaviour, including the co-pilot deleting its own
   points on a retry.
 
-Now [14 of 14 scenarios pass](docs/m3_first_runs.md).
+**New field problem, caught while it happens:** [a scan that keeps starting over
+from the first row](docs/M3_virtual_instrument.md#s14-and-s15-added-2026-10-08--a-scan-that-never-ends)
+— the detection rule was replayed on 17 recorded real scans first (no false alarm,
+both real cases caught), then the co-pilot's stop-fix-rescan was proven on the twin,
+including the case where the machine does not confirm the stop.
+
+Now [16 of 16 scenarios pass](docs/m3_first_runs.md).
 
 ### Publishing safely
 

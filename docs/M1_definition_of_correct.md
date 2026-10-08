@@ -185,9 +185,10 @@ Format: **Pass when** = the conditions that must all hold. Linked global rules a
 | F25 | Good config had automatic focus grid **off** → fallback "scanner's own focus" has no points on faint slides | Config choice interacts with fallback | S3 | Focus points failed **and** FocusDensity 0 → no fallback exists → stop with `FOCUS-POINTS`, start no scan (2026-10-05, proven by M3 S11 + mutation check) | G3 | ✅ |
 | F26 | Customer session silently **turned into Training** after a save | Database row replaced without the audience field | S3 | Audience passed on every save | G9 | ✅ |
 | F27 | First attempt to set the scan box sometimes finds no input fields | Tab switch timing | S1 | Retry succeeds | G2 | 🟡 masked by retry |
+| F28 | The scan **keeps starting over from the first row** and never finishes (a real customer problem; reproduced on purpose 2026-10-08) | X-speed too high for the camera (or, less often, a too slow camera connection) | S3 | During the scan: a tile that comes a second time = started over → Stop, and only when the scanner confirms it: X-speed of the lens in use lowered in the good file (backup first), settings restored, **one** new scan. Not confirmed → touch nothing, ask the human to press Stop. Still repeating at a safe speed → technician (camera cable). Proven on 17 recorded real scans and by M3 S14/S15 + mutation check; not yet seen live | G4, G7, G12 | 🟡 not yet live |
 
-**Summary:** 27 failure modes · 18 ✅ guarded · 5 🟡 partly · 4 ⛔ open.
-By severity: S4 × 3 (all guarded or process-guarded) · S3 × 13 · S2 × 10 · S1 × 1.
+**Summary:** 28 failure modes · 18 ✅ guarded · 6 🟡 partly · 4 ⛔ open.
+By severity: S4 × 3 (all guarded or process-guarded) · S3 × 14 · S2 × 10 · S1 × 1.
 
 ---
 

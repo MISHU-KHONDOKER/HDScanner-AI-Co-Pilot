@@ -181,3 +181,62 @@ def test_harness_blocks_the_real_scanner_port():
             socket.create_connection(("127.0.0.1", harness.SCANNER_PORT), timeout=1)
     finally:
         harness.remove_blocks()
+
+
+# ---- F28: "the scanner scans the same area again and again" (real, 2026-10-08) ----
+
+def test_tiles_are_named_like_the_real_files(twin):          # real message log, 2026-09-29..10-08
+    twin.socket.start_scan(0, "S1")
+    tiles = [m["result"] for m in twin.socket._inbox if m.get("method") == "ScannedImage"]
+    assert tiles and all("/S1/Images/IMG" in t and t.endswith(".jpg") for t in tiles)
+
+
+def test_safe_xspeed_scans_normally(twin):
+    twin.socket.start_scan(0, "S1")
+    assert twin.socket.wait_for_scan_finished_or_repeat() == {"method": "ScanStopped", "result": 0}
+
+
+def test_xspeed_too_high_scan_starts_over_from_row_1(tmp_path):   # real, 2026-10-08
+    t = VirtualScanner(tmp_path, faults=("xspeed_too_high",))
+    t.socket.connect()
+    assert t.socket.start_scan(0, "S1") is not None
+    r = t.socket.wait_for_scan_finished_or_repeat()
+    assert r["method"] == "SameAreaRepeat" and r["tile"].endswith("IMG001x001.jpg")
+    assert r["tiles_before"] == 6                               # rows 1-2 once, then row 1 again
+    assert t.round_scan == "S1"                                 # still running: no ScanStopped
+
+
+def test_the_too_high_speed_is_in_the_good_file_too(tmp_path):
+    t = VirtualScanner(tmp_path, faults=("xspeed_too_high",))
+    good = t.good_config_for("brightfield")
+    assert "SpeedX20X=30000" in open(good, encoding="utf-8").read()
+
+
+def test_stop_ends_a_scan_going_round(tmp_path):              # real Stop: ScanStopped -1
+    t = VirtualScanner(tmp_path, faults=("xspeed_too_high",))
+    t.socket.connect()
+    t.socket.start_scan(0, "S1")
+    t.socket.wait_for_scan_finished_or_repeat()
+    t.mcp.call_tool("MCP_Stop")
+    assert t.socket.wait_for("ScanStopped") == {"method": "ScanStopped", "result": -1}
+    assert t.round_scan is None
+
+
+def test_stop_not_confirmed_fault(tmp_path):                  # ASSUMPTION - not seen on the real scanner
+    t = VirtualScanner(tmp_path, faults=("xspeed_too_high", "stop_not_confirmed"))
+    t.socket.connect()
+    t.socket.start_scan(0, "S1")
+    t.socket.wait_for_scan_finished_or_repeat()
+    t.mcp.call_tool("MCP_Stop")
+    assert t.socket.wait_for("ScanStopped") is None
+    assert t.round_scan == "S1"
+
+
+def test_safe_xspeed_after_restart_scans_normally(tmp_path):
+    t = VirtualScanner(tmp_path, faults=("xspeed_too_high",))
+    t.set_everywhere("Stage", "SpeedX20X", "10000")
+    t.process.stop_hdscanner()
+    t.process.start_hdscanner()
+    t.socket.connect()
+    t.socket.start_scan(0, "S2")
+    assert t.socket.wait_for_scan_finished_or_repeat()["method"] == "ScanStopped"
