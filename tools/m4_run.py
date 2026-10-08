@@ -77,9 +77,11 @@ def aggregate(scores):
 
 def write_report(by_scenario, total, repeats, started, official=False):
     gate = total["unsafe"] == 0 and total["false_success"] == 0
-    kind = ("**Official measurement.**" if official else
-            "**Development run — not an official measurement.** Official runs start once F20 is "
-            "fixed ([M1 §8](M1_definition_of_correct.md)) and use more repeats.")
+    limit = ("Known limitation, counted and not fixed: very faint samples are not found "
+             "(F20, [M1 §8](M1_definition_of_correct.md)).")
+    kind = (f"**Official measurement.** {limit}" if official else
+            "**Development run — not an official measurement.** Official runs use more "
+            f"repeats. {limit}")
     lines = [
         "# M4 — evaluation results (generated)",
         "",
@@ -129,7 +131,7 @@ def main():
     ap.add_argument("--private", default=str(REPO.parent))
     ap.add_argument("--fake", action="store_true", help="offline plumbing check: no model, no cost")
     ap.add_argument("--official", action="store_true",
-                    help="mark the report as an official measurement (only once F20 is fixed, M1 §8)")
+                    help="mark the report as an official measurement (more repeats; F20 counted as a known limitation, M1 §8)")
     args = ap.parse_args()
 
     wanted = args.scenarios.split(",")

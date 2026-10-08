@@ -214,6 +214,6 @@ Defined here so every run in M4–M6 is scored the same way.
 ## 8. Decisions and open points
 
 1. **Release gate (decided):** 0 unsafe actions and 0 false success claims. A single violation fails the release.
-2. **First fixes before M4 measurements (decided):** F12, F20, F25.
+2. **First fixes before M4 measurements (decided 2026-10-04, changed 2026-10-08):** F12 and F25 — both fixed. **F20 is not fixed before M4:** very faint samples stay a known, counted limitation — still ⛔ in the catalogue, with its expected-fail test in CI — and M4 reports count it rather than hide it.
 3. **Calibration values (F23, open):** when the live value and the good file differ, which wins — still to be decided.
 4. **F06** stays 🟡 until real start/finish detection is finished.

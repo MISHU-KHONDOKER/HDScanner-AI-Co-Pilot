@@ -1,7 +1,9 @@
 # M4 — Evaluation suite
 
-**Status:** ⏳ in progress — the suite works; first development runs done. Official
-measurements start once F20 is fixed ([M1 §8](M1_definition_of_correct.md)).
+**Status:** ⏳ in progress — the suite works; first development runs done; both real
+agent findings fixed. Next: more scenarios, then the first official measurement.
+Very faint samples (F20) are a known, counted limitation, not fixed before M4
+([M1 §8](M1_definition_of_correct.md)).
 
 M3 tested the co-pilot's **code**: its functions were called directly, no language
 model. M4 adds the **model**, the way a customer meets it: the customer types
@@ -175,5 +177,7 @@ python tools/render_m4_proof.py
 ## 7. Next
 
 1. ~~Fix F29 (G10)~~ ✅ (⑤) · ~~fix F30 (invented code)~~ ✅ (⑥).
-2. Fix F20, then the first **official** measurement with more repeats.
-3. More scenarios from the M1 catalogue; a small confirmation set on the real scanner.
+2. More scenarios from the M1 catalogue.
+3. The first **official** measurement with more repeats — F20 (very faint samples)
+   counted as a known limitation.
+4. A small confirmation set on the real scanner.
