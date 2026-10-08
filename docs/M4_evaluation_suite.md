@@ -192,6 +192,28 @@ success, escalation 12/12** — [m4_results.md](m4_results.md). About 2.9 millio
 tokens, 98 % from cache. The first-batch conversations (E13, E14) are the expensive ones:
 up to 225,000 prompt tokens each.
 
+### What it cost
+
+Measured on the model provider's usage page for the day of the development runs
+(2026-10-08): the three real runs — 34 conversations, 3.53 million prompt tokens of
+which 98 % were served from the provider's cache, and about 6,000 completion tokens —
+cost about **¥0.30 CNY** (≈ 0.04 USD), roughly **¥0.085 per million tokens**. It is
+that cheap because almost everything sent is the same long instruction text, which
+the provider caches.
+
+| | Tokens | Cost |
+|---|---|---|
+| One ordinary conversation (4 model calls) | ≈ 94,000 | ≈ ¥0.008 |
+| One first-batch conversation (E13, 9 model calls) | ≈ 225,000 | ≈ ¥0.02 |
+| All three development runs (34 conversations) | ≈ 3.5 million | ≈ ¥0.30 |
+| Official run, estimate (14 scenarios × 10) | ≈ 15 million | ≈ ¥1.3 |
+
+Two notes: the provider has peak and off-peak prices, so the same run can cost
+less at another hour; and its usage page lists the model actually serving the
+requests as **deepseek-flash** (the co-pilot asks for `deepseek-chat`). Results
+therefore belong to that model version — something M5 (comparing models) has to
+keep track of.
+
 ## 5. What this does — and does not — show
 
 - **The tools are right now**: picture ① → ④ is the virtual scanner and the scorer
