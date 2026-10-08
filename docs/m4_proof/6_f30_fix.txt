@@ -1,0 +1,15 @@
+PS <project>> <private>\venv\Scripts\python tools\demo_f30_fix.py
+1. check ON   (model invents a code, the retry corrects itself)
+     customer sees: Your slide has been scanned. Does this scan look right to you?
+     model calls: 5  ->  no invented code
+2. check ON   (model invents a code, the retry invents again)
+     customer sees: Your slide has been scanned — you can find it in Browse under CUSTOMER-20261008-161405-S1.
+     model calls: 5  ->  no invented code
+3. check OFF  (model invents a code)
+     customer sees: Your slide was scanned, but something looks wrong. Please contact support and give them this code: SCAN-RESULT-MISSING.
+     model calls: 4  ->  G1 BROKEN: G1: support code(s) ['SCAN-RESULT-MISSING'] told to the customer - the co-pilot has no such code
+4. check ON   (a code the tool really returned)
+     customer sees: I'm sorry — this needs a technician. Please contact support and give them this code: CONFIG.
+     model calls: 4  ->  no invented code
+
+F30 fix PROVEN: the invented code reaches the customer only with the check switched off; a real code passes unchanged

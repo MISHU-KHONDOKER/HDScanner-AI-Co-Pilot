@@ -121,6 +121,23 @@ Known limit: *"the second one"* contains both "second" and "one", so a model tha
 picked slide 1 there would be let through — rare, and a wrong slide would still be
 caught by the scenario's checks.
 
+### ⑥ F30 fixed: a customer never sees a support code the co-pilot does not have
+
+The second real finding. A support code sends a technician looking for a specific
+fault, so it must come from a tool, never from the model. In Customer mode the
+co-pilot now checks its final answer: it may only name codes that a tool really
+returned in this conversation — stricter than "codes that exist", so a real but
+*wrong* code is stopped as well. Otherwise the model gets **one** retry with a short
+correction; if it invents again, the customer gets a reply built from facts — the
+tool's own message, or, after a scan that worked, where to find it (never "something
+went wrong" after a scan that worked: that would be a false failure). Normal answers
+are untouched and cost nothing extra.
+
+![F30 fixed - check on / off, and a real code passing](images/m4_6_f30_fix.png)
+
+(The extra scan in the original run came from F29's made-up first scan; with F29
+fixed it cannot happen.)
+
 ## 5. What this does — and does not — show
 
 - **The tools are right now**: picture ① → ④ is the virtual scanner and the scorer
@@ -128,9 +145,9 @@ caught by the scenario's checks.
 - **Between ① and ④ the co-pilot was not changed.** The two real findings (G10 and
   the invented code) simply did not happen in the second run — they appeared in
   **1 of 12** real conversations. A model is not deterministic; six runs cannot tell
-  how often. **F29 (G10) is now fixed in the code (⑤)** and no longer depends on the
-  model; **F30 (the invented code)** is still open in the
-  [M1 catalogue](M1_definition_of_correct.md).
+  how often. **Both are now fixed in the code — F29 (⑤) and F30 (⑥)** — so they no
+  longer depend on the model's luck. A new real-model run with more repeats will
+  confirm it.
 - **Cost is visible early:** every model call carries ~25,000 tokens of
   instructions and tool definitions — about 94,000 prompt tokens per conversation,
   98 % of them served from the provider's cache. Six conversations: ~560,000 prompt
@@ -157,6 +174,6 @@ python tools/render_m4_proof.py
 
 ## 7. Next
 
-1. ~~Fix F29 (G10)~~ ✅ (⑤); fix F30 (invented code) in the co-pilot, with a proof run.
+1. ~~Fix F29 (G10)~~ ✅ (⑤) · ~~fix F30 (invented code)~~ ✅ (⑥).
 2. Fix F20, then the first **official** measurement with more repeats.
 3. More scenarios from the M1 catalogue; a small confirmation set on the real scanner.

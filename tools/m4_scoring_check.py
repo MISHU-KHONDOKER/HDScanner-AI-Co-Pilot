@@ -44,10 +44,21 @@ def load_without_slide_guard(private_root, twin):
     return main
 
 
+def load_without_code_check(private_root, twin):
+    """Same for the invented-code case: the co-pilot's own F30 check is switched off
+    (in memory), so the invented code really reaches the customer and the scorer must
+    catch it."""
+    main = _load(private_root, twin)
+    main._invented_codes = lambda *a, **k: []
+    return main
+
+
 right = 0
 for label, sid, answers in cases:
     it = iter(answers); sc = SC[sid]
-    driver.load_copilot = load_without_slide_guard if "before the slide" in label else _load
+    driver.load_copilot = (load_without_slide_guard if "before the slide" in label
+                           else load_without_code_check if "invents a support code" in label
+                           else _load)
     run = run_conversation(PRIVATE, sc["script"], sc["mode"], faults=sc["faults"], fake_model=lambda *a, **k: next(it))
     driver.load_copilot = _load
     s = score_run(sc, run)

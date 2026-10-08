@@ -129,7 +129,8 @@ by fixed rules for success, unsafe actions, false "done" claims, correct escalat
 time and tokens. The first real run (4 of 6) was read by hand: one gap in the virtual
 scanner (fixed, with proof), a scorer that missed an invented support code (fixed,
 with proof), and **two real findings in the agent** — scanning without asking which
-slide, and an invented support code — now open in the failure catalogue. Every step
+slide, and an invented support code — both now fixed in the agent's code, each proven
+by switching the fix off on purpose. Every step
 is shown with the real terminal output.
 
 ### Publishing safely
