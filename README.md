@@ -1,6 +1,6 @@
-# HDScanner AI Co-Pilot — Agent Engineering Reference
+# Industrial AI Agent Validation on a Digital Twin
 
-[![tests](https://github.com/MISHU-KHONDOKER/HDScanner-AI-Co-Pilot/actions/workflows/tests.yml/badge.svg)](https://github.com/MISHU-KHONDOKER/HDScanner-AI-Co-Pilot/actions/workflows/tests.yml)
+[![tests](https://github.com/MISHU-KHONDOKER/industrial-agent-twin-validation/actions/workflows/tests.yml/badge.svg)](https://github.com/MISHU-KHONDOKER/industrial-agent-twin-validation/actions/workflows/tests.yml)
 
 A production-distilled reference for building an **LLM agent with tool-calling**.
 This repository contains the reusable, provider-agnostic core of a support agent
