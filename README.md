@@ -2,18 +2,25 @@
 
 [![tests](https://github.com/MISHU-KHONDOKER/industrial-agent-twin-validation/actions/workflows/tests.yml/badge.svg)](https://github.com/MISHU-KHONDOKER/industrial-agent-twin-validation/actions/workflows/tests.yml)
 
-A production-distilled reference for building an **LLM agent with tool-calling**.
-This repository contains the reusable, provider-agnostic core of a support agent
-that was built to guide users through hardware troubleshooting — with the
-domain-specific parts (vendor knowledge, hardware protocol, screenshots)
-removed so the engineering patterns stand on their own.
+An **industrial AI agent** — an LLM co-pilot that operates a laboratory slide scanner
+for its users — and the **evidence** that it is correct, safe and deployable.
 
-> **What this is:** a clean, runnable skeleton demonstrating how to build a
-> safe, stateful, tool-using agent on any OpenAI-compatible API.
->
+The agent is validated on a **behavioural digital twin** of the instrument: a virtual
+scanner built only from observed real behaviour (every behaviour is listed with where
+and when it was seen), with real failures that can be switched on. On it, the **real,
+unchanged agent** is tested without a language model and with the real model in the
+loop — and every result is shown with the real terminal output.
+
+| Milestone | What it proves |
+|---|---|
+| [M1](docs/M1_definition_of_correct.md) Define "correct" | 12 rules, pass/fail criteria for every machine action, 30 real failure modes |
+| [M2](docs/M2_test_foundation.md) Test foundation | Unit tests + CI + a mutation-test proof |
+| [M3](docs/M3_virtual_instrument.md) Digital twin | 16 of 16 scenarios with the real agent, each fix proven by breaking it on purpose |
+| [M4](docs/M4_evaluation_suite.md) Evaluation suite ⏳ | Real model in the loop: success, unsafe actions, false "done" claims, cost |
+
 > **What this is not:** the full scanner integration. That lives in a private
-> repository because it reverse-engineers a proprietary hardware control
-> interface and embeds vendor documentation.
+> repository, because it controls a proprietary hardware interface and embeds
+> vendor documentation.
 
 ---
 
