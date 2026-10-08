@@ -99,16 +99,38 @@ scanning the same area again and again"*, lists *"X-speed (20X lens): 30000 →
 10000"*, shows the picture and asks the first-batch question.
 Release gate (0 unsafe, 0 false success): ✅. Full table: **[m4_results.md](m4_results.md)**.
 
+### ⑤ F29 fixed: no scan with a slide the customer did not name
+
+The first real finding, fixed in the co-pilot. A sentence in the instructions
+("ask which slide") is followed *usually*; a rule that must always hold belongs in
+the code. The co-pilot now checks, before any scan tool runs, that the customer
+said that slide number in the message that started the turn — as a digit, a number
+word or a Chinese numeral (*"1"*, *"slide two"*, *"扫描第二张"*). If not, nothing is
+scanned and the model is told to ask *"Which slide should I scan — 1, 2, 3 or 4?"*.
+A number from earlier in the chat does not count: *"scan again"* gets one short
+question rather than a scan of whatever slide was named minutes ago.
+
+Proof — a stand-in model does exactly what the real model did (scan slide 1 right
+after *"start scan"*); the guard is switched off in memory for step 2, no file is
+changed. (The stand-in's sentences are scripted; what matters is how many scans
+reach the machine.)
+
+![F29 fixed - guard on / off / on](images/m4_5_f29_fix.png)
+
+Known limit: *"the second one"* contains both "second" and "one", so a model that
+picked slide 1 there would be let through — rare, and a wrong slide would still be
+caught by the scenario's checks.
+
 ## 5. What this does — and does not — show
 
 - **The tools are right now**: picture ① → ④ is the virtual scanner and the scorer
   being corrected, with proof for each.
-- **The co-pilot was not changed.** The two real findings (G10 and the invented
-  code) simply did not happen in the second run — they have appeared in **1 of 12**
-  real conversations so far. A model is not deterministic; six runs cannot tell how
-  often. They are open findings (F29, F30 in the
-  [M1 catalogue](M1_definition_of_correct.md)), to be fixed in the co-pilot and then
-  measured with more repeats.
+- **Between ① and ④ the co-pilot was not changed.** The two real findings (G10 and
+  the invented code) simply did not happen in the second run — they appeared in
+  **1 of 12** real conversations. A model is not deterministic; six runs cannot tell
+  how often. **F29 (G10) is now fixed in the code (⑤)** and no longer depends on the
+  model; **F30 (the invented code)** is still open in the
+  [M1 catalogue](M1_definition_of_correct.md).
 - **Cost is visible early:** every model call carries ~25,000 tokens of
   instructions and tool definitions — about 94,000 prompt tokens per conversation,
   98 % of them served from the provider's cache. Six conversations: ~560,000 prompt
@@ -135,6 +157,6 @@ python tools/render_m4_proof.py
 
 ## 7. Next
 
-1. Fix F29 (G10) and F30 (invented code) in the co-pilot, each with a proof run.
+1. ~~Fix F29 (G10)~~ ✅ (⑤); fix F30 (invented code) in the co-pilot, with a proof run.
 2. Fix F20, then the first **official** measurement with more repeats.
 3. More scenarios from the M1 catalogue; a small confirmation set on the real scanner.

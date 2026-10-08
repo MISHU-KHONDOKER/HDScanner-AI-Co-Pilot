@@ -1,0 +1,12 @@
+PS <project>> <private>\venv\Scripts\python tools\demo_f29_fix.py
+1. guard ON   customer: 'start scan'  ->  scans in turn 1: 0
+     co-pilot said: Which slide should I scan — 1, 2, 3 or 4?
+     whole conversation: 1 scan(s)  ->  SUCCESS
+2. guard OFF  customer: 'start scan'  ->  scans in turn 1: 1
+     co-pilot said: Which slide should I scan — 1, 2, 3 or 4?
+     whole conversation: 2 scan(s)  ->  FAIL  (G10: auto_scan called before the customer gave the slide (args {'slide': 1}); scans: expected 1, got 2)
+3. guard ON   customer: 'start scan'  ->  scans in turn 1: 0
+     co-pilot said: Which slide should I scan — 1, 2, 3 or 4?
+     whole conversation: 1 scan(s)  ->  SUCCESS
+
+F29 fix PROVEN: the made-up scan happens only with the guard switched off

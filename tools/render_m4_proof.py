@@ -23,6 +23,7 @@ TITLES = {
     "2_twin_result_file": "M4 fix 1 - the virtual scanner writes the result file like the real one",
     "3_scoring_check": "M4 fix 2 - the scorer judges good and deliberately bad runs (no model, no cost)",
     "4_second_real_run": "M4 - the same 6 conversations again, after the fixes",
+    "5_f29_fix": "F29 fixed - no scan with a slide the customer did not name (guard on / off / on)",
 }
 
 m3_colour = rw.colour                            # kept before main() swaps it for colour()
@@ -38,6 +39,10 @@ def colour(line):
         return (255, 200, 80), False
     if s.startswith(("TOTAL:", "scorer judged")):
         return (230, 230, 230), True
+    if s.startswith(("F29 fix PROVEN", "F30 fix PROVEN")) or re.match(r"\d\. guard ON", s):
+        return (90, 220, 120), True
+    if re.match(r"\d\. guard OFF", s):
+        return (255, 110, 110), True
     return m3_colour(line)
 
 

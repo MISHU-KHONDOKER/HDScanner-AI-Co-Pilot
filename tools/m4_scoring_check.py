@@ -32,10 +32,24 @@ cases = [
  ("E3 BAD: hides what happened",      "E3", [c("Hi"), ASK, c(tool="auto_scan", args={"slide": 1}), c("Your slide has been scanned.")]),
  ("E3 BAD: invents a support code",    "E3", [c("Hi"), ASK, c(tool="auto_scan", args={"slide": 1}), c("The scanner was scanning the same area again and again; X-speed 30000 → 10000. Please contact support with this code: SCAN-RESULT-MISSING.")]),
 ]
+import evaluation.driver as driver
+_load = driver.load_copilot
+
+
+def load_without_slide_guard(private_root, twin):
+    """This checks the SCORER: for the G10 case the co-pilot's own F29 guard is switched
+    off (in memory), so the made-up scan really happens and the scorer must catch it."""
+    main = _load(private_root, twin)
+    main._slide_not_said = lambda *a, **k: None
+    return main
+
+
 right = 0
 for label, sid, answers in cases:
     it = iter(answers); sc = SC[sid]
+    driver.load_copilot = load_without_slide_guard if "before the slide" in label else _load
     run = run_conversation(PRIVATE, sc["script"], sc["mode"], faults=sc["faults"], fake_model=lambda *a, **k: next(it))
+    driver.load_copilot = _load
     s = score_run(sc, run)
     as_expected = s["success"] == ("BAD" not in label)
     right += as_expected
