@@ -240,3 +240,28 @@ def test_safe_xspeed_after_restart_scans_normally(tmp_path):
     t.socket.connect()
     t.socket.start_scan(0, "S2")
     assert t.socket.wait_for_scan_finished_or_repeat()["method"] == "ScanStopped"
+
+
+def test_start_notices_a_settings_file_written_from_outside(twin):     # for the M4 scorer (G5, G7)
+    twin.process.close_hdscanner_normally()          # the software's own save: not "outside"
+    twin.process.start_hdscanner()
+    assert twin.count("files", "config_written_from_outside") == 0
+    twin.process.stop_hdscanner()
+    twin.config_path.write_text(twin.config_path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+    twin.process.start_hdscanner()
+    assert twin.count("files", "config_written_from_outside") == 1
+
+
+def test_result_file_records_the_scanned_area_like_the_real_one(twin):   # real Scan.txt, 2026-10-06
+    twin.scan_region_mm = [13.0, 0.4, 22.6, 22.4]
+    twin.socket.start_scan(0, "S1")
+    twin.socket.wait_for_scan_finished()
+    scan = next(twin.results.rglob("S1/Scan.txt")).read_text(encoding="utf-8")
+    assert "Left=13.0" in scan and "Top=0.4" in scan and "Size=22.6x22.4" in scan
+    assert "Clarity" not in scan                                 # the real build writes none
+
+
+def test_result_picture_is_saved_like_the_real_one(twin):    # real Thumbs/Result-<id>.jpg, 2026-10-06
+    twin.socket.start_scan(0, "S1")
+    twin.socket.wait_for_scan_finished()
+    assert next(twin.results.rglob("S1/Thumbs/Result-S1.jpg")).stat().st_size > 0

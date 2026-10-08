@@ -13,3 +13,6 @@ journal/
 
 # Private sync rewrite rules - never published
 .sync-private.txt
+
+# M4 raw results: full conversations, can quote the private knowledge base - local only
+evaluation/results/

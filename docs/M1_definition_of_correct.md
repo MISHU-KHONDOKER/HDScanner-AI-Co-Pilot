@@ -186,9 +186,11 @@ Format: **Pass when** = the conditions that must all hold. Linked global rules a
 | F26 | Customer session silently **turned into Training** after a save | Database row replaced without the audience field | S3 | Audience passed on every save | G9 | ✅ |
 | F27 | First attempt to set the scan box sometimes finds no input fields | Tab switch timing | S1 | Retry succeeds | G2 | 🟡 masked by retry |
 | F28 | The scan **keeps starting over from the first row** and never finishes (a real customer problem; reproduced on purpose 2026-10-08) | X-speed too high for the camera (or, less often, a too slow camera connection) | S3 | During the scan: a tile that comes a second time = started over → Stop, and only when the scanner confirms it: X-speed of the lens in use lowered in the good file (backup first), settings restored, **one** new scan. Not confirmed → touch nothing, ask the human to press Stop. Still repeating at a safe speed → technician (camera cable). Proven on 17 recorded real scans and by M3 S14/S15 + mutation check; not yet seen live | G4, G7, G12 | 🟡 not yet live |
+| F29 | Customer typed *"start scan"* — the model **scanned slide 1 without asking** which slide (found by M4, real model, 1 of 12 conversations) | The model filled in a slide number itself despite the tool description | S3 | Tool description only (it says: ask) | G10 | ⛔ open |
+| F30 | The model told the customer to call support with a **support code that does not exist** ("SCAN-RESULT-MISSING"), after an extra scan nobody asked for (found by M4, same run) | The model wrote its own code instead of passing on the tool's message | S2 | M4 scorer detects it; nothing stops it in the co-pilot yet | G1 | ⛔ open |
 
-**Summary:** 28 failure modes · 18 ✅ guarded · 6 🟡 partly · 4 ⛔ open.
-By severity: S4 × 3 (all guarded or process-guarded) · S3 × 14 · S2 × 10 · S1 × 1.
+**Summary:** 30 failure modes · 18 ✅ guarded · 6 🟡 partly · 6 ⛔ open.
+By severity: S4 × 3 (all guarded or process-guarded) · S3 × 15 · S2 × 11 · S1 × 1.
 
 ---
 

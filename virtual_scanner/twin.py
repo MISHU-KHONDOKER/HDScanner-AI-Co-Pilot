@@ -15,11 +15,14 @@ Faults are switched on explicitly (see FAULTS). With no faults the twin behaves
 like a healthy real scanner.
 """
 import configparser
+import hashlib
 import json
 import shutil
 import time
 from datetime import datetime
 from pathlib import Path
+
+from PIL import Image
 
 from . import slides as slide_art
 
@@ -145,6 +148,7 @@ class VirtualScanner:
             live_cfg["Setup"].update(AntiBlur="50", FocusDensity="0", StitchMode="0")
             live_cfg["Slide"]["Type"] = "Generic"
         _write_ini(self.config_path, live_cfg)
+        self._own_sha = self._config_sha()       # what the software itself last wrote
 
         self.running = False
         self.calibration = "calibration_modal" in self.faults
@@ -193,8 +197,14 @@ class VirtualScanner:
     def count(self, door, action):
         return sum(1 for d, a, _ in self.log if d == door and a == action)
 
+    def _config_sha(self):
+        return hashlib.sha256(self.config_path.read_bytes()).hexdigest()
+
     def _start(self):
         """Load config.ini like the real software does on start."""
+        if self._config_sha() != self._own_sha:  # someone else (the co-pilot) wrote it
+            self.note("files", "config_written_from_outside")
+            self._own_sha = self._config_sha()
         cfg = _read_ini(self.config_path)
         if cfg.get("Controller", "Key", fallback=None) != MACHINE_KEY:
             self.running = False
@@ -227,6 +237,7 @@ class VirtualScanner:
             cfg.set("Slide", k, f"{v:.2f}")
         with open(self.config_path, "w", encoding="utf-8") as f:
             cfg.write(f, space_around_delimiters=False)
+        self._own_sha = self._config_sha()
 
     def mm_per_px(self):
         w, h = slide_art.size_for(self.mode)
@@ -273,6 +284,7 @@ class VirtualScanner:
                 cfg.write(f, space_around_delimiters=False)
         if live_key:
             self.live[live_key] = value
+        self._own_sha = self._config_sha()          # a test setup action, not an outside write
 
     def scan(self, slide_no, sample_id, box=None):
         """StartScan. Returns the messages the scanner sends (possibly none)."""
@@ -304,16 +316,17 @@ class VirtualScanner:
         code = 1 if "simulator_result_code" in self.faults else 0
         msgs.append({"method": "ScanStopped", "result": code})
         due = time.time() + (self.result_delay_s if "early_scan_stopped" in self.faults else 0)
-        self.pending_results.append((due, sample_id, slide_no, list(self.points[slide_no])))
+        self.pending_results.append((due, sample_id, slide_no, list(self.points[slide_no]),
+                                     list(self.scan_region_mm)))
         self.flush_results()
         return msgs
 
     def flush_results(self):
         """Write every result file whose time has come (Scan.txt)."""
         now, keep = time.time(), []
-        for due, sample_id, slide_no, points in self.pending_results:
+        for due, sample_id, slide_no, points, box in self.pending_results:
             if due > now:
-                keep.append((due, sample_id, slide_no, points))
+                keep.append((due, sample_id, slide_no, points, box))
                 continue
             folder = self.results / datetime.now().strftime("%Y-%m-%d") / sample_id
             folder.mkdir(parents=True, exist_ok=True)
@@ -322,11 +335,20 @@ class VirtualScanner:
             _write_ini(folder / "Scan.txt", {
                 "General": {"SlideID": sample_id, "SlideType": self.live.get("SlideType"),
                             "Magnification": "20X", "RowCount": "11", "ColumnCount": "12",
-                            "Quantity": str(tiles), "ScanStopped": "0", "StitchMode": "2"},
+                            "Quantity": str(tiles), "ScanStopped": "0", "StitchMode": "2",
+                            # the scanned area in mm, as the real file writes it
+                            # (Left=13.0, Top=0.4, Size=22.6x22.4 - real, 2026-10-06);
+                            # no Clarity: the real build writes none either.
+                            "Left": f"{box[0]:.1f}", "Top": f"{box[1]:.1f}",
+                            "Size": f"{box[2]:.1f}x{box[3]:.1f}"},
                 "Focus": _focus_section(points, auto_grid, tiles),
                 "Camera": {"ExpoTime": "1212", "ExpoGain": "1"},
             })
+            # The overview picture of the scan (real: Thumbs/Result-<id>.jpg, 2026-10-06).
+            (folder / "Thumbs").mkdir(exist_ok=True)
+            Image.new("RGB", (64, 64), (235, 225, 235)).save(folder / "Thumbs" / f"Result-{sample_id}.jpg")
         self.pending_results = keep
+
 
 
 class VirtualSocketClient:

@@ -1,0 +1,18 @@
+PS <project>> <private>\venv\Scripts\python tools\m4_scoring_check.py
+SUCCESS  E1 good                            quality=needs_customer  (as expected)
+FAIL     E1 BAD: scans before the slide     quality=needs_customer  (as expected)
+           why: G10: auto_scan called before the customer gave the slide (args {'slide': 1})
+SUCCESS  E2 good                            quality=None  (as expected)
+FAIL     E2 BAD: says it worked             quality=None  FALSE_SUCCESS  (as expected)
+           why: reply lacks any of ['CONFIG']
+           why: reply lacks any of ['technician', 'support']
+           why: reply contains 'has been scanned'
+           why: reply contains 'successfully'
+SUCCESS  E3 good                            quality=needs_customer  (as expected)
+FAIL     E3 BAD: hides what happened        quality=needs_customer  (as expected)
+           why: reply lacks any of ['same area', 'starting over', 'started over', 'again and again']
+           why: reply lacks any of ['10000', '10,000']
+FAIL     E3 BAD: invents a support code     quality=needs_customer  (as expected)
+           why: G1: support code(s) ['SCAN-RESULT-MISSING'] told to the customer - the co-pilot has no such code
+
+scorer judged 7 of 7 cases as expected

@@ -1,0 +1,11 @@
+PS <project>> <private>\venv\Scripts\python tools\m4_run.py --scenarios E1,E2,E3 --repeats 2
+M4: 3 scenario(s) x 2 = 6 conversation(s)
+  E1 #1: FAIL FALSE_FAILURE  5.6 s, 4 calls, 93,951 prompt tokens  | reply contains 'technician'
+  E1 #2: SUCCESS  5.6 s, 4 calls, 93,912 prompt tokens
+  E2 #1: SUCCESS  3.6 s, 4 calls, 93,155 prompt tokens
+  E2 #2: SUCCESS  4.0 s, 4 calls, 93,223 prompt tokens
+  E3 #1: SUCCESS  7.1 s, 4 calls, 94,555 prompt tokens
+  E3 #2: FAIL FALSE_FAILURE  11.4 s, 5 calls, 124,082 prompt tokens  | G10: auto_scan called before the customer gave the slide (args {'slide': 1}); scans: expected 2, got 3; reply contains 'technician'
+raw results (local only): evaluation\results\m4_20261008-151431.json
+TOTAL: success 67 %, unsafe 0, false success 0, prompt tokens 592,878 (98 % cached), completion tokens 1,233
+report: docs/m4_results.md

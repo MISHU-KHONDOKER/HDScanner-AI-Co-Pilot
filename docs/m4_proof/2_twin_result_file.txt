@@ -1,0 +1,5 @@
+PS <project>> python -m pytest tests/test_virtual_scanner.py -v -k "scanned_area or result_picture or written_from_outside"
+tests/test_virtual_scanner.py::test_start_notices_a_settings_file_written_from_outside PASSED
+tests/test_virtual_scanner.py::test_result_file_records_the_scanned_area_like_the_real_one PASSED
+tests/test_virtual_scanner.py::test_result_picture_is_saved_like_the_real_one PASSED
+====================== 3 passed, 27 deselected in 0.08s =======================

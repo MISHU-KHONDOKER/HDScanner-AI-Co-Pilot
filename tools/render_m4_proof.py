@@ -1,0 +1,69 @@
+"""Turn the saved M4 terminal outputs in docs/m4_proof/ into pictures (docs/images/m4_*.png).
+
+The texts are real terminal output, copied from the runs as they happened; local
+folders are shortened to <project> / <private>. Each one passes the leak check
+before it is drawn. Same look as the M3 walkthrough pictures.
+
+    python tools/render_m4_proof.py
+"""
+import re
+import sys
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO / "tools"))
+import leak_check  # noqa: E402
+import render_walkthrough as rw  # noqa: E402
+
+SOURCE = REPO / "docs" / "m4_proof"
+OUT = REPO / "docs" / "images"
+
+TITLES = {
+    "1_first_real_run": "M4 - first real run: 6 conversations with the real model (before the fixes)",
+    "2_twin_result_file": "M4 fix 1 - the virtual scanner writes the result file like the real one",
+    "3_scoring_check": "M4 fix 2 - the scorer judges good and deliberately bad runs (no model, no cost)",
+    "4_second_real_run": "M4 - the same 6 conversations again, after the fixes",
+}
+
+m3_colour = rw.colour                            # kept before main() swaps it for colour()
+
+
+def colour(line):
+    s = line.lstrip()
+    if re.match(r"E\d+ #\d+: SUCCESS", s):
+        return (90, 220, 120), True
+    if re.match(r"E\d+ #\d+: FAIL", s):
+        return (255, 110, 110), True
+    if s.startswith("why:"):
+        return (255, 200, 80), False
+    if s.startswith(("TOTAL:", "scorer judged")):
+        return (230, 230, 230), True
+    return m3_colour(line)
+
+
+def main():
+    rw.colour = colour                           # the M3 drawing code, M4 colours
+    terms = leak_check.private_terms()
+    OUT.mkdir(parents=True, exist_ok=True)
+    problems, done = [], 0
+    for name, title in TITLES.items():
+        path = SOURCE / f"{name}.txt"
+        if not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8")
+        found = leak_check.check_file(f"docs/m4_proof/{name}.txt", text.encode(), terms)
+        if found:
+            problems += found
+            continue
+        lines = [re.sub(r"\s+$", "", ln) for ln in text.splitlines()]
+        rw.render(lines, title, OUT / f"m4_{name}.png")
+        done += 1
+    if problems:
+        print("NOT drawn (leak check):", *problems, sep="\n  ")
+        return 1
+    print(f"{done} picture(s) written to docs/images/")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -114,6 +114,17 @@ including the case where the machine does not confirm the stop.
 
 Now [16 of 16 scenarios pass](docs/m3_first_runs.md).
 
+### Evaluation suite (in progress)
+
+The [evaluation suite](docs/M4_evaluation_suite.md) puts the **real language model**
+in the loop: a customer conversation on the virtual scanner, run repeatedly, scored
+by fixed rules for success, unsafe actions, false "done" claims, correct escalation,
+time and tokens. The first real run (4 of 6) was read by hand: one gap in the virtual
+scanner (fixed, with proof), a scorer that missed an invented support code (fixed,
+with proof), and **two real findings in the agent** — scanning without asking which
+slide, and an invented support code — now open in the failure catalogue. Every step
+is shown with the real terminal output.
+
 ### Publishing safely
 
 Everything here passes [`tools/leak_check.py`](tools/leak_check.py), which runs
